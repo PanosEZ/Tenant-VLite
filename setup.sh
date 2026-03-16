@@ -25,6 +25,10 @@ pip install --upgrade pip
 echo "[SETUP] Installing project dependencies..."
 pip install -r requirements.txt
 
+# 4.5 AWS Setup
+echo "[SETUP] Checking AWS Credentials..."
+python3 scripts/onboard.py
+
 # 5. Set up WebUI dependencies
 echo "[SETUP] Installing WebUI dependencies..."
 cd webui

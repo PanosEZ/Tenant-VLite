@@ -16,3 +16,6 @@ node_modules/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Credentials
+aws_credentials.json

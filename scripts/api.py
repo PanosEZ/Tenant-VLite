@@ -91,17 +91,20 @@ async def history_save(request: Request):
     body = await request.json()
     chat_id = body.get("id")
     messages = body.get("messages", [])
+    context_diary = body.get("context_diary")
     if not chat_id:
         return JSONResponse({"error": "Missing id"}, status_code=400)
 
     fpath = os.path.join(HISTORY_DIR, f"{chat_id}.json")
-    # Preserve existing title if file already exists
+    # Preserve existing title and context_diary if file already exists
     title = ""
+    existing_diary = ""
     if os.path.exists(fpath):
         try:
             with open(fpath, "r", encoding="utf-8") as f:
                 existing = json.load(f)
             title = existing.get("title", "")
+            existing_diary = existing.get("context_diary", "")
         except Exception:
             pass
 
@@ -109,10 +112,11 @@ async def history_save(request: Request):
         "id": chat_id,
         "title": title,
         "messages": messages,
+        "context_diary": context_diary if context_diary is not None else existing_diary,
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data, f, ensure_ascii=False, indent=4)
     return JSONResponse({"ok": True})
 
 
@@ -132,7 +136,7 @@ async def history_rename(request: Request):
         data = json.load(f)
     data["title"] = new_title
     with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False)
+        json.dump(data, f, ensure_ascii=False, indent=4)
     return JSONResponse({"ok": True})
 
 
@@ -169,6 +173,17 @@ def clean_bot_text(text):
 async def chat(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
+    chat_id = body.get("chat_id", "")
+
+    # Strip frontend display markers from messages before sending to model
+    clean_messages = []
+    for msg in messages:
+        if msg.get("role") == "assistant":
+            text = msg["content"][0]["text"]
+            text = re.sub(r'\{\{TOOL:[^}]+\}\}', '', text).strip()
+            clean_messages.append({"role": "assistant", "content": [{"text": text}]})
+        else:
+            clean_messages.append(msg)
 
     async def event_stream():
         # Use DEALER to receive multiple stream chunks from the ROUTER
@@ -178,8 +193,8 @@ async def chat(request: Request):
         sock.setsockopt_string(zmq.IDENTITY, str(uuid.uuid4()))
         sock.connect("tcp://127.0.0.1:5557")
         try:
-            # Send the conversation to v-aws.py
-            await sock.send_json({"messages": messages})
+            # Send the conversation + chat_id to v-aws.py
+            await sock.send_json({"messages": clean_messages, "chat_id": chat_id})
 
             # Continuously yield chunks to the frontend as v-aws sends them
             while True:
@@ -192,10 +207,15 @@ async def chat(request: Request):
 
                 if reply.get("done"):
                     done_payload = {"done": True}
-                    if "raw_history" in reply:
-                        done_payload["raw_history"] = reply["raw_history"]
+                    if "total_tokens" in reply:
+                        done_payload["total_tokens"] = reply["total_tokens"]
                     yield f"data: {json.dumps(done_payload)}\n\n"
                     break
+
+                # chain_step: finalize current bubble, next text starts a new one
+                if reply.get("chain_step"):
+                    yield f"data: {json.dumps({'chain_step': True})}\n\n"
+                    continue
 
                 # Stream the text chunk
                 raw_text = reply.get("text", "")

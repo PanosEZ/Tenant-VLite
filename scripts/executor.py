@@ -40,7 +40,14 @@ def start_executor():
     }
 
     while True:
-        message = subscriber.recv_string()
+        raw = subscriber.recv_string()
+
+        # PUB messages are now JSON: {"chat_id": "...", "text": "..."}
+        try:
+            envelope = json.loads(raw)
+            message = envelope.get("text", "")
+        except (json.JSONDecodeError, AttributeError):
+            message = raw
         
         match = command_pattern.search(message)
         if match:

@@ -341,14 +341,15 @@ function App() {
         let finalMessages = [...newMessages, assistantMsg]
 
         try {
-            // Option A Context Diary: Only send the newest user message to the backend
-            const lastUserMsg = newMessages[newMessages.length - 1]
-            const payloadMessages = [{ role: lastUserMsg.role, content: lastUserMsg.content }]
+            const payloadMessages = newMessages.slice(-5).map(m => ({
+                role: m.role,
+                content: m.content
+            }))
 
             const res = await fetch(`${GATEWAY_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: payloadMessages }),
+                body: JSON.stringify({ messages: payloadMessages, chat_id: currentChatId }),
                 signal: controller.signal,
             })
 
@@ -363,6 +364,8 @@ function App() {
             let thinkingText = ''
             let activeToolName = ''
             let isProcessing = false
+            let completedAssistants = []
+            let currentTimestamp = assistantMsg.timestamp
 
             while (true) {
                 const { done, value } = await reader.read()
@@ -380,33 +383,44 @@ function App() {
                             setError(data.error)
                             break
                         }
+                        if (data.chain_step) {
+                            completedAssistants.push({ role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: currentTimestamp })
+                            fullText = ''
+                            thinkingText = ''
+                            activeToolName = ''
+                            isProcessing = false
+                            currentTimestamp = new Date().toISOString()
+                            const updatedMsgs = [...newMessages, ...completedAssistants, { role: 'assistant', content: [{ text: '' }], thinking: '', processing: false, timestamp: currentTimestamp }]
+                            setMessages(updatedMsgs)
+                            finalMessages = updatedMsgs
+                        }
                         if (data.tool_name) {
                             activeToolName = data.tool_name
                         }
                         if (data.processing) {
                             isProcessing = true
-                            const updatedMsgs = [...newMessages, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: true, active_tool: activeToolName, timestamp: assistantMsg.timestamp }]
+                            const updatedMsgs = [...newMessages, ...completedAssistants, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: true, active_tool: activeToolName, timestamp: currentTimestamp }]
                             setMessages(updatedMsgs)
                             finalMessages = updatedMsgs
                         }
                         if (data.text) {
                             fullText += data.text
-                            const updatedMsgs = [...newMessages, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: isProcessing, active_tool: isProcessing ? activeToolName : '', timestamp: assistantMsg.timestamp }]
+                            const updatedMsgs = [...newMessages, ...completedAssistants, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: isProcessing, active_tool: isProcessing ? activeToolName : '', timestamp: currentTimestamp }]
                             setMessages(updatedMsgs)
                             finalMessages = updatedMsgs
                         }
                         if (data.thinking) {
                             thinkingText += data.thinking
-                            const updatedMsgs = [...newMessages, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: assistantMsg.timestamp }]
+                            const updatedMsgs = [...newMessages, ...completedAssistants, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: currentTimestamp }]
                             setMessages(updatedMsgs)
                             finalMessages = updatedMsgs
                         }
                         if (data.done) {
-                            if (data.raw_history) {
-                                const updatedMsgs = [...newMessages, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: assistantMsg.timestamp, raw_history: data.raw_history }]
-                                setMessages(updatedMsgs)
-                                finalMessages = updatedMsgs
-                            }
+                            const doneMsg = { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: currentTimestamp }
+                            if (data.total_tokens) doneMsg.total_tokens = data.total_tokens
+                            const updatedMsgs = [...newMessages, ...completedAssistants, doneMsg]
+                            setMessages(updatedMsgs)
+                            finalMessages = updatedMsgs
                             break
                         }
                     } catch { }
@@ -443,15 +457,18 @@ function App() {
 
     const retryMessage = useCallback(async (assistantIndex) => {
         if (streaming) return
-        const userMsg = messages[assistantIndex - 1]
-        if (!userMsg || userMsg.role !== 'user') return
 
-        const truncated = messages.slice(0, assistantIndex)
+        // Walk backwards to find the nearest user message (handles consecutive chain bubbles)
+        let userIdx = assistantIndex - 1
+        while (userIdx >= 0 && messages[userIdx].role !== 'user') userIdx--
+        if (userIdx < 0) return
+
+        // Truncate right after that user message (removes all chain assistant bubbles)
+        const truncated = messages.slice(0, userIdx + 1)
 
         setError(null)
         setStreaming(true)
 
-        // Ensure we have a chat ID
         let currentChatId = chatId
         if (!currentChatId) {
             currentChatId = generateChatId()
@@ -468,14 +485,15 @@ function App() {
         let finalMessages = [...truncated, assistantMsg]
 
         try {
-            // Option A Context Diary: Only send the newest user message to the backend
-            const lastUserMsg = truncated[truncated.length - 1]
-            const payloadMessages = [{ role: lastUserMsg.role, content: lastUserMsg.content }]
+            const payloadMessages = truncated.slice(-5).map(m => ({
+                role: m.role,
+                content: m.content
+            }))
 
             const res = await fetch(`${GATEWAY_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: payloadMessages }),
+                body: JSON.stringify({ messages: payloadMessages, chat_id: currentChatId }),
                 signal: controller.signal,
             })
 
@@ -488,6 +506,8 @@ function App() {
             let thinkingText = ''
             let activeToolName = ''
             let isProcessing = false
+            let completedAssistants = []
+            let currentTimestamp = assistantMsg.timestamp
 
             while (true) {
                 const { done, value } = await reader.read()
@@ -500,35 +520,44 @@ function App() {
                     try {
                         const data = JSON.parse(line.slice(6))
                         if (data.error) { setError(data.error); break }
+                        if (data.chain_step) {
+                            completedAssistants.push({ role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: currentTimestamp })
+                            fullText = ''
+                            thinkingText = ''
+                            activeToolName = ''
+                            isProcessing = false
+                            currentTimestamp = new Date().toISOString()
+                            const updatedMsgs = [...truncated, ...completedAssistants, { role: 'assistant', content: [{ text: '' }], thinking: '', processing: false, timestamp: currentTimestamp }]
+                            setMessages(updatedMsgs)
+                            finalMessages = updatedMsgs
+                        }
                         if (data.tool_name) {
                             activeToolName = data.tool_name
                         }
                         if (data.processing) {
                             isProcessing = true
-                            const updatedMsgs = [...truncated, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: true, active_tool: activeToolName, timestamp: assistantMsg.timestamp }]
+                            const updatedMsgs = [...truncated, ...completedAssistants, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: true, active_tool: activeToolName, timestamp: currentTimestamp }]
                             setMessages(updatedMsgs)
                             finalMessages = updatedMsgs
                         }
                         if (data.text) {
-                            isProcessing = false
-                            activeToolName = ''
                             fullText += data.text
-                            const updatedMsgs = [...truncated, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: assistantMsg.timestamp }]
+                            const updatedMsgs = [...truncated, ...completedAssistants, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: isProcessing, active_tool: isProcessing ? activeToolName : '', timestamp: currentTimestamp }]
                             setMessages(updatedMsgs)
                             finalMessages = updatedMsgs
                         }
                         if (data.thinking) {
                             thinkingText += data.thinking
-                            const updatedMsgs = [...truncated, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: assistantMsg.timestamp }]
+                            const updatedMsgs = [...truncated, ...completedAssistants, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: currentTimestamp }]
                             setMessages(updatedMsgs)
                             finalMessages = updatedMsgs
                         }
                         if (data.done) {
-                            if (data.raw_history) {
-                                const updatedMsgs = [...truncated, { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: assistantMsg.timestamp, raw_history: data.raw_history }]
-                                setMessages(updatedMsgs)
-                                finalMessages = updatedMsgs
-                            }
+                            const doneMsg = { role: 'assistant', content: [{ text: fullText }], thinking: thinkingText, processing: false, timestamp: currentTimestamp }
+                            if (data.total_tokens) doneMsg.total_tokens = data.total_tokens
+                            const updatedMsgs = [...truncated, ...completedAssistants, doneMsg]
+                            setMessages(updatedMsgs)
+                            finalMessages = updatedMsgs
                             break
                         }
                     } catch { }
@@ -548,7 +577,6 @@ function App() {
             setStreaming(false)
             inputRef.current?.focus()
 
-            // Auto-save after retry completes
             saveChat(currentChatId, finalMessages)
         }
     }, [messages, streaming, chatId, saveChat])
@@ -824,161 +852,219 @@ function App() {
                                 </div>
                             </div>
                         ) : (
-                            messages.map((msg, i) => {
-                                const isEditingMode = editingIndex !== null;
-                                const isFocused = isEditingMode && editingIndex === i;
-                                const isDimmed = isEditingMode && editingIndex !== i;
+                            (() => {
+                                // Group consecutive assistant messages into chains
+                                const groups = []
+                                for (let i = 0; i < messages.length; i++) {
+                                    const msg = messages[i]
+                                    if (msg.role === 'assistant' && groups.length > 0 && groups[groups.length - 1].role === 'assistant') {
+                                        groups[groups.length - 1].msgs.push({ msg, idx: i })
+                                    } else {
+                                        groups.push({ role: msg.role, msgs: [{ msg, idx: i }] })
+                                    }
+                                }
 
-                                return (
-                                    <div
-                                        key={i}
-                                        id={`message-${i}`}
-                                        className={`message ${msg.role} ${isFocused ? 'is-focused' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
-                                    >
-                                        {msg.role === 'assistant' && (
+                                return groups.map((group) => {
+                                    const firstIdx = group.msgs[0].idx
+                                    const lastIdx = group.msgs[group.msgs.length - 1].idx
+                                    const firstMsg = group.msgs[0].msg
+                                    const lastMsg = group.msgs[group.msgs.length - 1].msg
+                                    const isEditingMode = editingIndex !== null
+                                    const isFocused = isEditingMode && editingIndex === firstIdx
+                                    const isDimmed = isEditingMode && editingIndex !== firstIdx
+                                    const isLastStreaming = streaming && lastIdx === messages.length - 1
+
+                                    if (group.role === 'user') {
+                                        const msg = firstMsg
+                                        const i = firstIdx
+                                        return (
+                                            <div
+                                                key={i}
+                                                id={`message-${i}`}
+                                                className={`message user ${isFocused ? 'is-focused' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
+                                            >
+                                                <div className="message-content">
+                                                    <div className="message-body">
+                                                        {msg.content[0].text}
+                                                    </div>
+                                                    <div className="message-actions" style={{ visibility: streaming ? 'hidden' : 'visible' }}>
+                                                        <button
+                                                            className="action-btn copy-action-btn"
+                                                            title="Copy"
+                                                                onClick={(e) => {
+                                                                    navigator.clipboard.writeText(msg.content[0].text)
+                                                                    const btn = e.currentTarget
+                                                                    const icon = btn.querySelector('.copy-icon')
+                                                                    const animContainer = btn.querySelector('.copy-lottie')
+                                                                    if (icon) icon.style.display = 'none'
+                                                                    if (animContainer) {
+                                                                        animContainer.style.display = 'flex'
+                                                                        animContainer.innerHTML = ''
+                                                                        const anim = lottie.loadAnimation({
+                                                                            container: animContainer,
+                                                                            renderer: 'svg',
+                                                                            loop: false,
+                                                                            autoplay: true,
+                                                                            animationData: structuredClone(copyCheckAnim)
+                                                                        })
+                                                                        anim.addEventListener('complete', () => {
+                                                                            anim.destroy()
+                                                                            animContainer.style.display = 'none'
+                                                                            if (icon) icon.style.display = ''
+                                                                        })
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <i className="fa-regular fa-copy copy-icon" />
+                                                                <span className="copy-lottie" style={{ display: 'none', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }} />
+                                                            </button>
+                                                            <button
+                                                                className="action-btn"
+                                                                title="Edit"
+                                                                onClick={() => {
+                                                                    setInput(msg.content[0].text)
+                                                                    setEditingIndex(i)
+                                                                    setTimeout(() => {
+                                                                        const msgEl = document.getElementById(`message-${i}`)
+                                                                        const container = msgEl?.closest('.messages')
+                                                                        if (msgEl && container) {
+                                                                            const targetScroll = msgEl.offsetTop - container.offsetTop - container.clientHeight + msgEl.clientHeight - 32;
+                                                                            container.scrollTop = Math.max(0, targetScroll);
+                                                                        }
+                                                                    }, 10)
+                                                                }}
+                                                            >
+                                                                <i className="fa-regular fa-pen-to-square" />
+                                                            </button>
+                                                        </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+                                    // Assistant group (single message or chain)
+                                    const chainTokens = lastMsg.total_tokens > 0 ? lastMsg.total_tokens : 0
+
+                                    return (
+                                        <div
+                                            key={firstIdx}
+                                            id={`message-${firstIdx}`}
+                                            className={`message assistant ${isFocused ? 'is-focused' : ''} ${isDimmed ? 'is-dimmed' : ''}`}
+                                        >
                                             <div className="assistant-avatar-container">
                                                 <AnimatedAvatar
                                                     src="/LLM-WAVE.gif"
-                                                    isStreaming={streaming && i === messages.length - 1}
+                                                    isStreaming={isLastStreaming}
                                                 />
                                             </div>
-                                        )}
-                                        <div className="message-content">
-                                            {msg.role === 'assistant' && (
+                                            <div className="message-content">
                                                 <div className="message-header">
                                                     <span className="message-sender">Model</span>
                                                     <span className="message-dot">•</span>
                                                     <span className="message-time">
-                                                        {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '7:34 PM'}
+                                                        {firstMsg.timestamp ? new Date(firstMsg.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '7:34 PM'}
                                                     </span>
+                                                    {chainTokens > 0 && (
+                                                        <span className="token-badge"><i className="fa-regular fa-comments" />+{chainTokens.toLocaleString()}</span>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {msg.role === 'assistant' && msg.thinking && (
-                                                <details className={`thinking-block ${streaming && i === messages.length - 1 ? 'streaming' : ''}`}>
-                                                    <summary>
-                                                        <i className="fa-solid fa-brain" />
-                                                        <span>Thinking</span>
-                                                        {streaming && i === messages.length - 1 && !msg.content[0].text && (
-                                                            <span className="thinking-spinner" />
+                                                {group.msgs.map(({ msg, idx }) => (
+                                                    <div key={idx} className="chain-step">
+                                                        {msg.thinking && (
+                                                            <details className={`thinking-block ${streaming && idx === messages.length - 1 ? 'streaming' : ''}`}>
+                                                                <summary>
+                                                                    <i className="fa-solid fa-brain" />
+                                                                    <span>Thinking</span>
+                                                                    {streaming && idx === messages.length - 1 && !msg.content[0].text && (
+                                                                        <span className="thinking-spinner" />
+                                                                    )}
+                                                                </summary>
+                                                                <div className="thinking-content">{msg.thinking}</div>
+                                                            </details>
                                                         )}
-                                                    </summary>
-                                                    <div className="thinking-content">{msg.thinking}</div>
-                                                </details>
-                                            )}
-                                            <div className={`message-body ${streaming && i === messages.length - 1 && msg.role === 'assistant' ? 'streaming' : ''}`}>
-                                                {msg.role === 'assistant' ? (
-                                                    <div className="markdown-content">
-                                                        {(() => {
-                                                            let t = msg.content[0].text
-                                                            // Strip raw commands
-                                                            t = t.replace(/<FUNCTION_CALL>[\s\S]*?<\/FUNCTION_CALL>/g, '')
-                                                            t = t.replace(/<CONTEXT>[\s\S]*?<\/CONTEXT>/g, '')
-                                                            t = t.replace(/^read\([^)]*\)\s*$/gm, '')
+                                                        <div className={`message-body ${streaming && idx === messages.length - 1 ? 'streaming' : ''}`}>
+                                                            <div className="markdown-content">
+                                                                {(() => {
+                                                                    let t = msg.content[0].text
+                                                                    t = t.replace(/<FUNCTION_CALL>[\s\S]*?<\/FUNCTION_CALL>/g, '')
+                                                                    t = t.replace(/<CONTEXT>[\s\S]*?<\/CONTEXT>/g, '')
+                                                                    t = t.replace(/^read\([^)]*\)\s*$/gm, '')
 
-                                                            // Split by {{TOOL:name}} markers
-                                                            const parts = t.split(/(\{\{TOOL:[^}]+\}\})/g)
+                                                                    const parts = t.split(/(\{\{TOOL:[^}]+\}\})/g)
 
-                                                            return parts.map((part, idx) => {
-                                                                const toolMatch = part.match(/^\{\{TOOL:(.+)\}\}$/)
-                                                                if (toolMatch) {
-                                                                    const toolName = toolMatch[1]
-                                                                    const appearance = getToolAppearance(toolName)
-                                                                    return (
-                                                                        <div key={idx} className="tool-execution-badge">
-                                                                            <i className={appearance.icon}></i>
-                                                                            <span>Executing <strong>{appearance.label}</strong></span>
-                                                                        </div>
-                                                                    )
-                                                                }
-                                                                const trimmed = part.trim()
-                                                                if (!trimmed) return null
-                                                                return (
-                                                                    <ReactMarkdown key={idx} remarkPlugins={[remarkGfm]}>
-                                                                        {trimmed}
-                                                                    </ReactMarkdown>
-                                                                )
-                                                            })
-                                                        })()}
+                                                                    return parts.map((part, pidx) => {
+                                                                        const toolMatch = part.match(/^\{\{TOOL:(.+)\}\}$/)
+                                                                        if (toolMatch) {
+                                                                            const toolName = toolMatch[1]
+                                                                            const appearance = getToolAppearance(toolName)
+                                                                            return (
+                                                                                <div key={pidx} className="tool-execution-badge">
+                                                                                    <i className={appearance.icon}></i>
+                                                                                    <span>Executing <strong>{appearance.label}</strong></span>
+                                                                                </div>
+                                                                            )
+                                                                        }
+                                                                        const trimmed = part.trim()
+                                                                        if (!trimmed) return null
+                                                                        return (
+                                                                            <ReactMarkdown key={pidx} remarkPlugins={[remarkGfm]}>
+                                                                                {trimmed}
+                                                                            </ReactMarkdown>
+                                                                        )
+                                                                    })
+                                                                })()}
+                                                            </div>
+                                                            {streaming && idx === messages.length - 1 && !msg.processing && (
+                                                                <span className="cursor" />
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                ) : (
-                                                    msg.content[0].text
-                                                )}
-                                                {streaming && i === messages.length - 1 && msg.role === 'assistant' && !msg.processing && (
-                                                    <span className="cursor" />
-                                                )}
-                                            </div>
-                                            {!(streaming && i === messages.length - 1 && msg.role === 'assistant') && (
-                                                <div className="message-actions">
+                                                ))}
+                                                <div className="message-actions" style={{ visibility: isLastStreaming ? 'hidden' : 'visible' }}>
                                                     <button
                                                         className="action-btn copy-action-btn"
                                                         title="Copy"
                                                         onClick={(e) => {
-                                                            navigator.clipboard.writeText(msg.content[0].text)
-                                                            const btn = e.currentTarget
-                                                            const icon = btn.querySelector('.copy-icon')
-                                                            const animContainer = btn.querySelector('.copy-lottie')
-                                                            if (icon) icon.style.display = 'none'
-                                                            if (animContainer) {
-                                                                animContainer.style.display = 'flex'
-                                                                animContainer.innerHTML = ''
-                                                                const anim = lottie.loadAnimation({
-                                                                    container: animContainer,
-                                                                    renderer: 'svg',
-                                                                    loop: false,
-                                                                    autoplay: true,
-                                                                    animationData: structuredClone(copyCheckAnim)
-                                                                })
-                                                                anim.addEventListener('complete', () => {
-                                                                    anim.destroy()
-                                                                    animContainer.style.display = 'none'
-                                                                    if (icon) icon.style.display = ''
-                                                                })
-                                                            }
-                                                        }}
-                                                    >
-                                                        <i className="fa-regular fa-copy copy-icon" />
-                                                        <span className="copy-lottie" style={{ display: 'none', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }} />
-                                                    </button>
-                                                    {msg.role === 'assistant' && (
+                                                                const allText = group.msgs.map(({ msg }) => msg.content[0].text).join('\n\n')
+                                                                navigator.clipboard.writeText(allText)
+                                                                const btn = e.currentTarget
+                                                                const icon = btn.querySelector('.copy-icon')
+                                                                const animContainer = btn.querySelector('.copy-lottie')
+                                                                if (icon) icon.style.display = 'none'
+                                                                if (animContainer) {
+                                                                    animContainer.style.display = 'flex'
+                                                                    animContainer.innerHTML = ''
+                                                                    const anim = lottie.loadAnimation({
+                                                                        container: animContainer,
+                                                                        renderer: 'svg',
+                                                                        loop: false,
+                                                                        autoplay: true,
+                                                                        animationData: structuredClone(copyCheckAnim)
+                                                                    })
+                                                                    anim.addEventListener('complete', () => {
+                                                                        anim.destroy()
+                                                                        animContainer.style.display = 'none'
+                                                                        if (icon) icon.style.display = ''
+                                                                    })
+                                                                }
+                                                            }}
+                                                        >
+                                                            <i className="fa-regular fa-copy copy-icon" />
+                                                            <span className="copy-lottie" style={{ display: 'none', width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }} />
+                                                        </button>
                                                         <button
                                                             className="action-btn"
                                                             title="Rerun"
-                                                            onClick={() => retryMessage(i)}
+                                                            onClick={() => retryMessage(lastIdx)}
                                                         >
                                                             <i className="fa-solid fa-rotate-right" />
                                                         </button>
-                                                    )}
-                                                    {msg.role === 'user' && (
-                                                        <button
-                                                            className="action-btn"
-                                                            title="Edit"
-                                                            onClick={() => {
-                                                                setInput(msg.content[0].text)
-                                                                setEditingIndex(i)
-                                                                setTimeout(() => {
-                                                                    const msgEl = document.getElementById(`message-${i}`)
-                                                                    const container = msgEl?.closest('.messages')
-                                                                    if (msgEl && container) {
-                                                                        // Calculate the exact target scroll position:
-                                                                        // Container's current scroll + Element's offset relative to container
-                                                                        // Minus the height of the container to align it to the bottom
-                                                                        // Plus the element's height to show the full element
-                                                                        // Plus extra padding for breathing room
-                                                                        const targetScroll = msgEl.offsetTop - container.offsetTop - container.clientHeight + msgEl.clientHeight - 32;
-                                                                        container.scrollTop = Math.max(0, targetScroll);
-                                                                    }
-                                                                }, 10)
-                                                            }}
-                                                        >
-                                                            <i className="fa-regular fa-pen-to-square" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
+                                                    </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                )
-                            })
+                                    )
+                                })
+                            })()
                         )}
                         <div ref={messagesEndRef} />
                     </div>

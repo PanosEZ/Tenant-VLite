@@ -4,11 +4,24 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import zmq
 import json
+import re
+import os
 
+# Load AWS Credentials from JSON
+script_dir = os.path.dirname(os.path.abspath(__file__))
+creds_path = os.path.join(script_dir, 'aws_credentials.json')
 
-# Hardcoded AWS Credentials
-ACCESS_KEY = "AKIAUHTS4K4PUZX7TIBB"
-SECRET_KEY = "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"
+ACCESS_KEY = ""
+SECRET_KEY = ""
+
+if os.path.exists(creds_path):
+    with open(creds_path, 'r') as f:
+        creds = json.load(f)
+        ACCESS_KEY = creds.get("AWS_ACCESS_KEY_ID", "")
+        SECRET_KEY = creds.get("AWS_SECRET_ACCESS_KEY", "")
+else:
+    print(f"[v-aws] WARNING: {creds_path} not found. Please run setup.bat/sh first.")
+
 REGION = "us-east-1"
 MODEL_ID = "moonshotai.kimi-k2.5"
 TEMPERATURE = 0.3
@@ -43,7 +56,6 @@ If there is an existing "STORY SO FAR (Diary)", you MUST NOT just report what yo
 Example: <CONTEXT>Previously, user asked about verify status. I found 3 unverified users (user1, agent1, user3). Today, user asked for their phone numbers. I looked them up and found none of them have phone numbers provided.</CONTEXT>
 Do NOT use the <CONTEXT> tag if you are just chatting and the current state of the user's message does not include the need for the execution of any commands.
 
--side note: if the user asks / requests for something completely ridiculous that would be a massive data strain like asking for the mails of all users in the platform or something crazy like that, then obviously tell them that this request exceeds the limits of the platform and you cannot fulfill it.
 """
 
 # Initialize standard boto3 client
@@ -69,8 +81,27 @@ receiver.bind("tcp://*:5556")
 api_socket = context.socket(zmq.ROUTER)
 api_socket.bind("tcp://*:5557")
 
+def truncate_at_tool(text):
+    """When the model triggers a tool command, strip any hallucinated content
+    it generated after the command. Returns text up to and including the tool line."""
+    # Find the end position of a read(x) line
+    read_match = re.search(r'^.*read\([^)]+\).*$', text, re.MULTILINE)
+    read_end = read_match.end() if read_match else None
+
+    # Find the end position of a </FUNCTION_CALL> block
+    func_match = re.search(r'</FUNCTION_CALL>', text)
+    func_end = func_match.end() if func_match else None
+
+    # Pick whichever tool command appears first
+    candidates = [pos for pos in (read_end, func_end) if pos is not None]
+    if not candidates:
+        return text
+    cut_pos = min(candidates)
+    return text[:cut_pos]
+
 print("[v-aws] Brain online. Listening for API requests on port 5557...")
 
+HISTORY_DIR = os.path.join(os.path.dirname(script_dir), "history")
 MAX_TOOL_ROUNDS = 10  # Safety cap to prevent infinite loops
 
 while True:
@@ -78,6 +109,7 @@ while True:
     identity, request_bytes = api_socket.recv_multipart()
     request = json.loads(request_bytes)
     messages = request.get("messages", [])
+    chat_id = request.get("chat_id", "")
 
     if not messages:
         api_socket.send_multipart([identity, json.dumps({"error": "No messages provided", "done": True}).encode()])
@@ -94,12 +126,17 @@ while True:
     print(f"{'='*60}")
 
     try:
-        # 1. Read the Diary (context.md)
+        # 1. Read the Diary from this chat's history JSON
         diary_context = ""
-        import os
-        if os.path.exists("context.md"):
-            with open("context.md", "r") as f:
-                diary_context = f.read().strip()
+        if chat_id:
+            chat_path = os.path.join(HISTORY_DIR, f"{chat_id}.json")
+            if os.path.exists(chat_path):
+                try:
+                    with open(chat_path, "r", encoding="utf-8") as f:
+                        chat_data = json.load(f)
+                    diary_context = chat_data.get("context_diary", "")
+                except Exception:
+                    pass
         
         # 2. Dynamically build the System Prompt with the Diary
         dynamic_system_prompt = SYSTEM_PROMPT
@@ -115,20 +152,30 @@ while True:
         )
 
         bot_reply = response['output']['message']['content'][0]['text']
+        usage = response.get('usage', {})
+        total_tokens = usage.get('inputTokens', 0) + usage.get('outputTokens', 0)
         print(f"\n[TENANT] {bot_reply}")
+        print(f"[TOKENS] {total_tokens} (in={usage.get('inputTokens',0)} out={usage.get('outputTokens',0)})")
         print(f"{'-'*60}")
 
         has_tool = "read(" in bot_reply or "<FUNCTION_CALL>" in bot_reply
         
-        # Stream this step immediately back to the client!
-        payload = json.dumps({"text": bot_reply, "tool_active": has_tool}).encode()
+        # When a tool is triggered, truncate hallucinated content after the command
+        display_text = truncate_at_tool(bot_reply) if has_tool else bot_reply
+
+        # Stream the clean text to the client
+        payload = json.dumps({"text": display_text, "tool_active": has_tool}).encode()
         api_socket.send_multipart([identity, payload])
 
-        # Add bot reply to conversation for potential follow-up rounds
-        messages.append(response['output']['message'])
+        # If a tool was triggered, signal the frontend to finalize this bubble
+        if has_tool:
+            api_socket.send_multipart([identity, json.dumps({"chain_step": True}).encode()])
 
-        # Publish to PUB so reader/executor can see the response
-        publisher.send_string(bot_reply)
+        # Add the truncated reply to conversation history so the model doesn't see its own hallucinations
+        messages.append({"role": "assistant", "content": [{"text": display_text}]})
+
+        # Publish to PUB so reader/executor/context can see the tool commands
+        publisher.send_string(json.dumps({"chat_id": chat_id, "text": bot_reply}))
 
         # Tool loop — keeps going as long as the LLM triggers a tool
         tool_round = 0
@@ -148,37 +195,33 @@ while True:
                 inferenceConfig={"temperature": TEMPERATURE}
             )
             bot_reply = response['output']['message']['content'][0]['text']
+            round_usage = response.get('usage', {})
+            total_tokens += round_usage.get('inputTokens', 0) + round_usage.get('outputTokens', 0)
             print(f"\n[TENANT] (follow-up #{tool_round}) {bot_reply}")
+            print(f"[TOKENS] cumulative={total_tokens} (this round: in={round_usage.get('inputTokens',0)} out={round_usage.get('outputTokens',0)})")
             print(f"{'-'*60}")
 
             has_tool = "read(" in bot_reply or "<FUNCTION_CALL>" in bot_reply
             
-            # Stream this follow-up step immediately!
-            payload = json.dumps({"text": bot_reply, "tool_active": has_tool}).encode()
+            # When a tool is triggered, truncate hallucinated content after the command
+            display_text = truncate_at_tool(bot_reply) if has_tool else bot_reply
+
+            # Stream the clean text to the client
+            payload = json.dumps({"text": display_text, "tool_active": has_tool}).encode()
             api_socket.send_multipart([identity, payload])
 
-            messages.append(response['output']['message'])
+            # If a tool was triggered, signal the frontend to finalize this bubble
+            if has_tool:
+                api_socket.send_multipart([identity, json.dumps({"chain_step": True}).encode()])
 
-            # Publish the follow-up reply (may trigger another tool round)
-            publisher.send_string(bot_reply)
+            # Add the truncated reply to conversation history
+            messages.append({"role": "assistant", "content": [{"text": display_text}]})
 
-        # Signal completion stream with optimized history
-        optimized_history = []
-        for msg in messages:
-            if msg["role"] == "user":
-                text = msg["content"][0]["text"]
-                if text.startswith("[Reader] Successfully read"):
-                    compressed_text = "[System: Executed read command and internalized manual.]"
-                    optimized_history.append({"role": "user", "content": [{"text": compressed_text}]})
-                elif text.startswith("[Executor]"):
-                    compressed_text = "[System: Executed FUNCTION_CALL and received database results.]"
-                    optimized_history.append({"role": "user", "content": [{"text": compressed_text}]})
-                else:
-                    optimized_history.append(msg)
-            else:
-                optimized_history.append(msg)
+            # Publish full text so reader/executor can detect tool commands
+            publisher.send_string(json.dumps({"chat_id": chat_id, "text": bot_reply}))
 
-        api_socket.send_multipart([identity, json.dumps({"done": True, "raw_history": optimized_history}).encode()])
+        done_payload = {"done": True, "total_tokens": total_tokens}
+        api_socket.send_multipart([identity, json.dumps(done_payload).encode()])
 
     except Exception as e:
         print(f"[v-aws] Error: {e}")

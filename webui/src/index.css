@@ -753,6 +753,7 @@ body {
     gap: 10px;
 }
 
+
 .assistant-avatar-container {
     margin-top: 7px;
     margin-right: 0px;
@@ -800,6 +801,18 @@ body {
     color: var(--text-dim);
     font-size: 13px;
     letter-spacing: 0.2px;
+}
+
+.token-badge {
+    color: #4ade80;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-left: 6px;
+    opacity: 0.85;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .message-body {
@@ -958,6 +971,10 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+}
+
+.chain-step + .chain-step {
+    margin-top: -22px;
 }
 
 .message-actions {
@@ -1513,6 +1530,10 @@ body {
 /* ─── Responsive Settings ────────────────────────────── */
 @media (max-width: 768px) {
 
+    .chain-step + .chain-step {
+        margin-top: -16px;
+    }
+
     .grid {
         grid-template-columns: 1fr;
     }
@@ -1585,11 +1606,7 @@ body {
 
     .message.assistant {
         display: grid;
-        grid-template-columns: 40px auto;
-        grid-template-areas:
-            "avatar header"
-            "body body"
-            "actions actions";
+        grid-template-columns: 40px 1fr;
         gap: 4px 10px;
         align-items: center;
     }
@@ -1598,23 +1615,28 @@ body {
         display: contents;
     }
 
+    .message.assistant .message-content > div {
+        grid-column: 1 / -1;
+    }
+
     .assistant-avatar-container {
-        grid-area: avatar;
+        grid-column: 1;
+        grid-row: 1;
         margin: 0;
     }
 
-    .message-header {
-        grid-area: header;
+    .message.assistant .message-content > .message-header {
+        grid-column: 2;
+        grid-row: 1;
         margin-left: 10px;
         margin-bottom: -4px;
+        padding-bottom: -4px;
         height: 100%;
         display: flex;
         align-items: flex-end;
-        padding-bottom: -4px;
     }
 
     .message.assistant .message-body {
-        grid-area: body;
         margin-top: -2px;
         border-radius: 16px;
         margin-left: -17px;
@@ -1623,12 +1645,11 @@ body {
     }
 
     .message.assistant .message-actions {
-        grid-area: actions;
+        padding-bottom: -4px;
         margin-left: -10px;
         height: 100%;
         display: flex;
         align-items: flex-end;
-        padding-bottom: -4px;
-
     }
+
 }

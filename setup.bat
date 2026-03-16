@@ -37,6 +37,10 @@ REM 4. Install the requirements
 echo [SETUP] Installing project dependencies...
 pip install -r requirements.txt
 
+REM 4.5 AWS Setup
+echo [SETUP] Checking AWS Credentials...
+python scripts\onboard.py
+
 REM 5. Set up WebUI dependencies
 echo [SETUP] Installing WebUI dependencies...
 pushd webui
