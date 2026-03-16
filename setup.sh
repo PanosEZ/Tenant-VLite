@@ -25,6 +25,12 @@ pip install --upgrade pip
 echo "[SETUP] Installing project dependencies..."
 pip install -r requirements.txt
 
-# 5. Run the tenant.py main boot script
+# 5. Set up WebUI dependencies
+echo "[SETUP] Installing WebUI dependencies..."
+cd webui
+npm install
+cd ..
+
+# 6. Run the tenant.py main boot script
 echo "[SETUP] Starting the Tenant-VLite server..."
 python3 tenant.py
