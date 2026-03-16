@@ -34,3 +34,4 @@ Instead, output ONLY a single `<FUNCTION_CALL>` block containing the function na
 You are free to include any text with your thoughts and reasoning before writing the final <FUNCTION_CALL> block. Do NOT fabricate results.
 
 you are strictly allowed to write only one function call, the dev tool can not execute many commands in one go.
+--- END OF FILE compliance_verification.md ---

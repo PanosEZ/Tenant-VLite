@@ -1,0 +1,18 @@
+# Python virtual environments
+venv/
+env/
+.env
+
+# Python compilation cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node.js dependencies
+node_modules/
+
+# OS and Editor files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,4 +1,7 @@
 import boto3
+import sys, asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import zmq
 import json
 
@@ -39,6 +42,8 @@ HOW TO WRITE THE DIARY:
 If there is an existing "STORY SO FAR (Diary)", you MUST NOT just report what you just did. Instead, you must rewrite the ENTIRE diary into a single, highly compressed paragraph that combines the most critical old facts with your new findings. The diary should evolve and reshape itself, slowly dropping irrelevant old details while adding current facts.
 Example: <CONTEXT>Previously, user asked about verify status. I found 3 unverified users (user1, agent1, user3). Today, user asked for their phone numbers. I looked them up and found none of them have phone numbers provided.</CONTEXT>
 Do NOT use the <CONTEXT> tag if you are just chatting and the current state of the user's message does not include the need for the execution of any commands.
+
+-side note: if the user asks / requests for something completely ridiculous that would be a massive data strain like asking for the mails of all users in the platform or something crazy like that, then obviously tell them that this request exceeds the limits of the platform and you cannot fulfill it.
 """
 
 # Initialize standard boto3 client

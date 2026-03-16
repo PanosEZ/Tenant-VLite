@@ -2,6 +2,7 @@ fastapi
 uvicorn
 python-multipart
 pyzmq
+tornado>=6.1
 boto3
 httpx
 groq

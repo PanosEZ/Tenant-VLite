@@ -1,9 +1,17 @@
+import sys, asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import zmq
 import re
 import os
 import sys
 import subprocess
 import json
+
+# --- CONFIGURATION ---
+# 1 token is roughly 4 characters. 16,000 chars is ~4,000 tokens.
+# Adjust this threshold based on your LLM's context window limits.
+MAX_CHAR_LIMIT = 16000 
 
 def start_executor():
     context = zmq.Context()
@@ -37,7 +45,7 @@ def start_executor():
         match = command_pattern.search(message)
         if match:
             raw_json_str = match.group(1).strip()
-            print(f"\n[Executor] ⚡ Detected <FUNCTION_CALL>!")
+            print(f"\n[Executor] - Detected <FUNCTION_CALL>!")
             
             # Extract just the JSON object from the matched section
             json_start = raw_json_str.find('{')
@@ -55,7 +63,7 @@ def start_executor():
                 if func_name not in script_mapping:
                     error_msg = f"SYSTEM TOOL ERROR: Unknown function '{func_name}'."
                     sender.send_string(error_msg)
-                    print(f"[Executor] ❌ {error_msg}")
+                    print(f"[Executor] X {error_msg}")
                     continue
                     
                 script_name = script_mapping[func_name]
@@ -71,31 +79,55 @@ def start_executor():
                     result = subprocess.run(command, capture_output=True, text=True, check=True)
                     db_output = result.stdout.strip()
                     
-                    # --- NEW: Extract first 100 words of the database output ---
+                    output_length = len(db_output)
+                    
+                    # ==========================================
+                    # THE CIRCUIT BREAKER (PAYLOAD INTERCEPTOR)
+                    # ==========================================
+                    if output_length > MAX_CHAR_LIMIT:
+                        estimated_tokens = output_length // 4
+                        print(f"[Executor] !!! WARNING: Catastrophic payload intercepted! ({estimated_tokens} tokens)")
+                        
+                        # Replace the massive database output with a strict system instruction
+                        error_instruction = (
+                            f"SYSTEM COMMAND FAILED: The command you tried to execute for the retrieval of data "
+                            f"from the database returned an unsustainable amount of data (estimated {estimated_tokens} tokens) "
+                            f"which crossed the max data limit.\n\n"
+                            f"Commands like this are forbidden since you cannot handle this much info dump in your context window. "
+                            f"Try structuring your command differently or using a different command (e.g., utilize 'limit', apply tighter 'filters', "
+                            f"or narrow down specific 'return_fields'), or inform the user that their request is invalid."
+                        )
+                        
+                        return_payload = error_instruction
+                    else:
+                        # Payload is safe, proceed normally
+                        return_payload = f"SYSTEM TOOL FEEDBACK:\nSuccessfully executed {func_name}.\nDatabase Output:\n{db_output}"
+                    # ==========================================
+
+                    # Extract first 100 words of the database output for terminal debug
                     words = db_output.split()
                     preview_text = " ".join(words[:100])
                     if len(words) > 100:
                         preview_text += "..."
                     
                     # 6. PUSH the database results back to vchat.py
-                    return_payload = f"SYSTEM TOOL FEEDBACK:\nSuccessfully executed {func_name}.\nDatabase Output:\n{db_output}"
                     sender.send_string(return_payload)
-                    print(f"[Executor] Success! Sent database results back to Tenant.")
                     
-                    # --- NEW: Print the preview to the terminal ---
-                    print(f"[Executor] Preview (First 100 words):\n{preview_text}\n")
+                    if output_length <= MAX_CHAR_LIMIT:
+                        print(f"[Executor] Success! Sent database results back to Tenant.")
+                        print(f"[Executor] Preview (First 100 words):\n{preview_text}\n")
                     
                 else:
                     sender.send_string(f"SYSTEM TOOL ERROR: The script {script_path} does not exist.")
-                    print(f"[Executor] ⚠️ Missing script: {script_path}")
+                    print(f"[Executor] !!! Missing script: {script_path}")
 
             except json.JSONDecodeError as e:
                 sender.send_string(f"SYSTEM TOOL ERROR: Invalid JSON payload. Error: {e}")
-                print(f"[Executor] ❌ JSON Parse Error: {e}")
+                print(f"[Executor] X JSON Parse Error: {e}")
             except subprocess.CalledProcessError as e:
                 error_msg = e.stderr.strip() or e.stdout.strip()
                 sender.send_string(f"SYSTEM TOOL ERROR: Script {script_name} crashed. Error: {error_msg}")
-                print(f"[Executor] ❌ Script crashed: {error_msg}")
+                print(f"[Executor] X Script crashed: {error_msg}")
             except Exception as e:
                 sender.send_string(f"SYSTEM TOOL ERROR: Could not run {func_name}. Error: {str(e)}")
 
