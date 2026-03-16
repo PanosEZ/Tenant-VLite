@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-multipart
+pyzmq
+boto3
+httpx
+groq
+pydantic==2.12.5

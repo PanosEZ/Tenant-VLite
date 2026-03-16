@@ -1,0 +1,778 @@
+[{
+  "_id": {
+    "$oid": "698cd1652f94fb54bc690925"
+  },
+  "id": "1",
+  "username": "admin",
+  "email": "admin@localhost",
+  "type": "ADMIN",
+  "ancestors": [],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "Admin",
+  "last_name": "User",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": true,
+  "email_verified": true,
+  "email_verified_at": null,
+  "phone_verified": true,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-11T18:58:45.264Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-11T18:58:45.264Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-11T18:58:45.264Z"
+  },
+  "depth": 0,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-11T18:58:45.265Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-11T18:58:45.265Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "698cd1652f94fb54bc690932"
+  },
+  "id": "2",
+  "username": "eur_currency_agent",
+  "email": "eur_agent@system.local",
+  "type": "CURRENCY_AGENT",
+  "parent_id": "1",
+  "ancestors": [
+    "1"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "EUR Currency",
+  "last_name": "Agent",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": true,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-11T18:58:45.396Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-11T18:58:45.396Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-11T18:58:45.396Z"
+  },
+  "depth": 1,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-11T18:58:45.396Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-11T18:58:45.396Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "698cd1652f94fb54bc69093f"
+  },
+  "id": "3",
+  "username": "try_currency_agent",
+  "email": "try_agent@system.local",
+  "type": "CURRENCY_AGENT",
+  "parent_id": "1",
+  "ancestors": [
+    "1"
+  ],
+  "status": "ACTIVE",
+  "currency": "TRY",
+  "sports_commission_basis": "NET",
+  "first_name": "TRY Currency",
+  "last_name": "Agent",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": true,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-11T18:58:45.465Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-11T18:58:45.465Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-11T18:58:45.465Z"
+  },
+  "depth": 1,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-11T18:58:45.466Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-11T18:58:45.466Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "698cd1652f94fb54bc69094c"
+  },
+  "id": "4",
+  "username": "usd_currency_agent",
+  "email": "usd_agent@system.local",
+  "type": "CURRENCY_AGENT",
+  "parent_id": "1",
+  "ancestors": [
+    "1"
+  ],
+  "status": "ACTIVE",
+  "currency": "USD",
+  "sports_commission_basis": "NET",
+  "first_name": "USD Currency",
+  "last_name": "Agent",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": true,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-11T18:58:45.531Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-11T18:58:45.531Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-11T18:58:45.531Z"
+  },
+  "depth": 1,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-11T18:58:45.531Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-11T18:58:45.531Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "698cd1652f94fb54bc690959"
+  },
+  "id": "5",
+  "username": "test_user_394",
+  "email": "test_394@test.local",
+  "type": "USER",
+  "parent_id": "2",
+  "ancestors": [
+    "1",
+    "2"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "Test",
+  "last_name": "User",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": true,
+  "is_system_account": false,
+  "email_verified": true,
+  "email_verified_at": null,
+  "phone_verified": true,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-11T18:58:45.593Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-11T18:58:45.593Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-11T18:58:45.593Z"
+  },
+  "depth": 2,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-11T18:58:45.593Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-11T18:58:45.593Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "699220a5b727ecb3b5fdbea0"
+  },
+  "id": "6",
+  "username": "agent1",
+  "email": "agent1@hotmail.com",
+  "type": "USER",
+  "parent_id": "2",
+  "ancestors": [
+    "1",
+    "2"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "",
+  "last_name": "",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": false,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-15T19:38:13.229Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-15T19:38:13.229Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-15T19:38:13.229Z"
+  },
+  "depth": 2,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-15T19:38:13.232Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-15T19:38:13.232Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6992211cb727ecb3b5fdbeb6"
+  },
+  "id": "7",
+  "username": "agent2",
+  "email": "asdadsdas@gmao.com",
+  "type": "AGENT",
+  "parent_id": "2",
+  "ancestors": [
+    "1",
+    "2"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "",
+  "last_name": "",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "4YG0D6",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": false,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-15T19:40:12.970Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-15T19:40:12.970Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-15T19:40:12.970Z"
+  },
+  "depth": 2,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-15T19:40:12.971Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-15T19:40:12.971Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6992212bb727ecb3b5fdbecd"
+  },
+  "id": "8",
+  "username": "agent3",
+  "email": "agent3agent3@gmail.com",
+  "type": "AGENT",
+  "parent_id": "2",
+  "ancestors": [
+    "1",
+    "2"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "",
+  "last_name": "",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "MTT18H",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": false,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-15T19:40:27.256Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-15T19:40:27.256Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-15T19:40:27.256Z"
+  },
+  "depth": 2,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-15T19:40:27.257Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-15T19:40:27.257Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6992214ab727ecb3b5fdbee4"
+  },
+  "id": "9",
+  "username": "agent5",
+  "email": "agent5@gmail.com",
+  "type": "AGENT",
+  "parent_id": "7",
+  "ancestors": [
+    "1",
+    "2",
+    "7"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "",
+  "last_name": "",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "4P623S",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": false,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-15T19:40:58.866Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-15T19:40:58.866Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-15T19:40:58.866Z"
+  },
+  "depth": 3,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-15T19:40:58.867Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-15T19:40:58.867Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6992215db727ecb3b5fdbefb"
+  },
+  "id": "10",
+  "username": "user1",
+  "email": "user1@gmail.com",
+  "type": "USER",
+  "parent_id": "9",
+  "ancestors": [
+    "1",
+    "2",
+    "7",
+    "9"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "",
+  "last_name": "",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": false,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-15T19:41:17.544Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-15T19:41:17.544Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-15T19:41:17.544Z"
+  },
+  "depth": 4,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-15T19:41:17.545Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-15T19:41:17.545Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6992217bb727ecb3b5fdbf11"
+  },
+  "id": "11",
+  "username": "user3",
+  "email": "user3@gmai.com",
+  "type": "USER",
+  "parent_id": "7",
+  "ancestors": [
+    "1",
+    "2",
+    "7"
+  ],
+  "status": "ACTIVE",
+  "currency": "EUR",
+  "sports_commission_basis": "NET",
+  "first_name": "",
+  "last_name": "",
+  "gender": "UNSPECIFIED",
+  "date_of_birth": {
+    "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "phone_prefix": "",
+  "phone_number": "",
+  "jurisdiction": "",
+  "language": "en",
+  "vip_level": 0,
+  "country": "",
+  "state": "",
+  "city": "",
+  "post_code": "",
+  "street_name": "",
+  "street_number": "",
+  "timezone": null,
+  "odds_format": "DECIMAL",
+  "session_expire": 10800,
+  "loyalty_points": 0,
+  "referral_code": "",
+  "referred_by_code": null,
+  "referred_by_user_id": null,
+  "is_test_account": false,
+  "is_system_account": false,
+  "email_verified": false,
+  "email_verified_at": null,
+  "phone_verified": false,
+  "phone_verified_at": null,
+  "terms_accepted_version": "",
+  "terms_accepted_at": {
+    "$date": "2026-02-15T19:41:47.237Z"
+  },
+  "privacy_policy_accepted_version": "",
+  "privacy_policy_accepted_at": {
+    "$date": "2026-02-15T19:41:47.237Z"
+  },
+  "marketing_accepted_version": "",
+  "marketing_accepted_at": {
+    "$date": "2026-02-15T19:41:47.237Z"
+  },
+  "depth": 3,
+  "search_max_range_days": 40,
+  "search_max_start_days": 90,
+  "registration_id": "",
+  "created_by_user_id": null,
+  "created_at": {
+    "$date": "2026-02-15T19:41:47.238Z"
+  },
+  "updated_at": {
+    "$date": "2026-02-15T19:41:47.238Z"
+  },
+  "__v": 0
+}]
