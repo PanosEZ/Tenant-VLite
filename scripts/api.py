@@ -180,7 +180,7 @@ async def chat(request: Request):
     for msg in messages:
         if msg.get("role") == "assistant":
             text = msg["content"][0]["text"]
-            text = re.sub(r'\{\{TOOL:[^}]+\}\}', '', text).strip()
+            text = re.sub(r'\{\{(?:TOOL|READ):[^}]+\}\}', '', text).strip()
             if not text:
                 text = "(continued)"
             clean_messages.append({"role": "assistant", "content": [{"text": text}]})
@@ -250,7 +250,8 @@ async def chat(request: Request):
                                 pass
 
                     # Inject the tool marker directly into the text stream
-                    yield f"data: {json.dumps({'text': f'{{{{TOOL:{extracted_tool}}}}}'})}\n\n"
+                    marker_type = "READ" if read_match else "TOOL"
+                    yield f"data: {json.dumps({'text': f'{{{{{marker_type}:{extracted_tool}}}}}'})}\n\n"
                     yield f"data: {json.dumps({'processing': True})}\n\n"
 
         except Exception as e:

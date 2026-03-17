@@ -36,17 +36,27 @@ function generateChatId() {
     return id
 }
 
-function AnimatedAvatar({ src, isStreaming }) {
+function AnimatedAvatar({ isStreaming }) {
+    const src = isStreaming ? "/LLM-WAVE.gif" : "/LLM-WAVE-IDLE.gif"
     const imgRef = useRef(null)
     const [frozen, setFrozen] = useState(false)
     const [frozenSrc, setFrozenSrc] = useState(null)
-    const wasStreaming = useRef(isStreaming)
     const imgLoaded = useRef(false)
-    const [cacheBuster] = useState(() => Date.now())
+
+    // Reset freezing state when streaming state changes
+    useEffect(() => {
+        if (isStreaming) {
+            setFrozen(false)
+            setFrozenSrc(null)
+        } else {
+            // We need to capture the idle frame
+            setFrozen(false) // Temporarily unfreeze to render the image and capture it
+        }
+    }, [isStreaming])
 
     const captureFrame = useCallback(() => {
         const img = imgRef.current
-        if (!img || frozen || !imgLoaded.current) return
+        if (!img || isStreaming || frozen) return
         try {
             const canvas = document.createElement('canvas')
             canvas.width = img.naturalWidth
@@ -59,33 +69,36 @@ function AnimatedAvatar({ src, isStreaming }) {
                 setFrozen(true)
             }
         } catch (e) { }
-    }, [frozen])
+    }, [isStreaming, frozen])
 
+    // Wait for image decode/render before capturing frame
     useEffect(() => {
-        if (!wasStreaming.current && !frozen) {
-            const timer = setTimeout(captureFrame, 300)
+        if (!isStreaming && !frozen) {
+            const timer = setTimeout(() => {
+                if (imgLoaded.current) {
+                    captureFrame()
+                }
+            }, 50)
             return () => clearTimeout(timer)
         }
-    }, [captureFrame, frozen])
+    }, [isStreaming, frozen, captureFrame])
 
-    useEffect(() => {
-        if (wasStreaming.current && !isStreaming) {
-            setTimeout(captureFrame, 50)
-        }
-        wasStreaming.current = isStreaming
-    }, [isStreaming, captureFrame])
-
-    if (frozen && frozenSrc) {
+    if (frozen && frozenSrc && !isStreaming) {
         return <img src={frozenSrc} alt="" className="assistant-avatar" />
     }
 
     return (
         <img
             ref={imgRef}
-            src={`${src}?t=${cacheBuster}`}
+            src={src}
             alt=""
             className="assistant-avatar"
-            onLoad={() => { imgLoaded.current = true }}
+            onLoad={() => { 
+                imgLoaded.current = true
+                if (!isStreaming && !frozen) {
+                    captureFrame()
+                }
+            }}
         />
     )
 }
@@ -953,7 +966,6 @@ function App() {
                                         >
                                             <div className="assistant-avatar-container">
                                                 <AnimatedAvatar
-                                                    src="/LLM-WAVE.gif"
                                                     isStreaming={isLastStreaming}
                                                 />
                                             </div>
@@ -990,17 +1002,20 @@ function App() {
                                                                     t = t.replace(/<CONTEXT>[\s\S]*?<\/CONTEXT>/g, '')
                                                                     t = t.replace(/^read\([^)]*\)\s*$/gm, '')
 
-                                                                    const parts = t.split(/(\{\{TOOL:[^}]+\}\})/g)
+                                                                    const parts = t.split(/(\{\{(?:TOOL|READ):[^}]+\}\})/g)
 
                                                                     return parts.map((part, pidx) => {
-                                                                        const toolMatch = part.match(/^\{\{TOOL:(.+)\}\}$/)
+                                                                        const toolMatch = part.match(/^\{\{(TOOL|READ):(.+)\}\}$/)
                                                                         if (toolMatch) {
-                                                                            const toolName = toolMatch[1]
+                                                                            const markerType = toolMatch[1]
+                                                                            const toolName = toolMatch[2]
                                                                             const appearance = getToolAppearance(toolName)
+                                                                            const verb = markerType === 'READ' ? 'Read' : 'Executed'
+                                                                            const icon = markerType === 'READ' ? 'fa-solid fa-book-open' : appearance.icon
                                                                             return (
                                                                                 <div key={pidx} className="tool-execution-badge">
-                                                                                    <i className={appearance.icon}></i>
-                                                                                    <span>Executing <strong>{appearance.label}</strong></span>
+                                                                                    <i className={icon} style={markerType === 'READ' ? { fontSize: '1.15em' } : undefined}></i>
+                                                                                    <span>{verb} <strong>{appearance.label}</strong></span>
                                                                                 </div>
                                                                             )
                                                                         }
