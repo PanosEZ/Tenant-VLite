@@ -227,6 +227,16 @@ while True:
             # Add the truncated reply to conversation history
             messages.append({"role": "assistant", "content": [{"text": display_text}]})
 
+            # The tool result (messages[-2]) has now been consumed by the model.
+            # Replace it with a short summary so it doesn't bloat subsequent calls.
+            if len(messages) >= 2 and messages[-2]["role"] == "user":
+                prev_text = messages[-2]["content"][0]["text"]
+                if prev_text.startswith("SYSTEM TOOL FEEDBACK:"):
+                    lines = prev_text.split('\n')
+                    summary = lines[1].strip() if len(lines) > 1 else "tool result"
+                    messages[-2]["content"][0]["text"] = f"[Delivered — {summary}]"
+                    print(f"[v-aws] Compressed consumed tool result: {summary}")
+
             # Publish full text so reader/executor can detect tool commands
             publisher.send_string(json.dumps({"chat_id": chat_id, "text": bot_reply}))
 
