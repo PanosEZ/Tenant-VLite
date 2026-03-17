@@ -36,10 +36,18 @@ setup.bat
 The setup scripts will create a virtual environment, install dependencies, prompt for AWS credentials, and start the system.
 
 ### Manual Start
-If you've already run the setup script once, you can start the system directly:
+If you've already run the setup script once, you can start the system directly using two terminals:
+
+**Terminal 1 (Backend):**
 ```bash
 source venv/bin/activate  # Or venv\Scripts\activate on Windows
 python scripts/tenant.py
+```
+
+**Terminal 2 (Frontend):**
+```bash
+cd webui
+npm run dev
 ```
 
 The application will be available at:
