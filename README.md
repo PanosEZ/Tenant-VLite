@@ -1,6 +1,6 @@
 # Tenant-VLite
 
-Tenant-VLite is an AI-powered chatbot system designed for customer service and QA operations on user management platforms. It acts as a virtual agent that can look up accounts, traverse organizational hierarchies, generate reports, and verify compliance using natural language.
+Tenant-VLite is an Agentic LLM based system that utilizes RAG based mechanics for dynamic information retrieval from a massive database of users. It is designed for customer service and QA operations on user management platforms. It acts as a virtual agent that can look up accounts, traverse organizational hierarchies, generate reports, and verify compliance using natural language.
 
 ## Architecture
 
