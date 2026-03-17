@@ -181,6 +181,8 @@ async def chat(request: Request):
         if msg.get("role") == "assistant":
             text = msg["content"][0]["text"]
             text = re.sub(r'\{\{TOOL:[^}]+\}\}', '', text).strip()
+            if not text:
+                text = "(continued)"
             clean_messages.append({"role": "assistant", "content": [{"text": text}]})
         else:
             clean_messages.append(msg)

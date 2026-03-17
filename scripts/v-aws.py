@@ -81,6 +81,14 @@ receiver.bind("tcp://*:5556")
 api_socket = context.socket(zmq.ROUTER)
 api_socket.bind("tcp://*:5557")
 
+def sanitize_messages(messages):
+    """Ensure no message has a blank text field, which Bedrock rejects."""
+    for msg in messages:
+        if isinstance(msg.get("content"), list):
+            for block in msg["content"]:
+                if "text" in block and not block["text"].strip():
+                    block["text"] = "(continued)"
+
 def truncate_at_tool(text):
     """When the model triggers a tool command, strip any hallucinated content
     it generated after the command. Returns text up to and including the tool line."""
@@ -144,6 +152,7 @@ while True:
             dynamic_system_prompt = f"==== STORY SO FAR (Diary) ====\n{diary_context}\n============================\n\n{SYSTEM_PROMPT}"
 
         # Call AWS Bedrock
+        sanitize_messages(messages)
         response = client.converse(
             modelId=MODEL_ID,
             messages=messages,
@@ -188,6 +197,7 @@ while True:
             # Inject the tool result as a user message and call Bedrock again
             messages.append({"role": "user", "content": [{"text": tool_result}]})
 
+            sanitize_messages(messages)
             response = client.converse(
                 modelId=MODEL_ID,
                 messages=messages,
