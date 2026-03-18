@@ -22,6 +22,8 @@ def traverse_hierarchy(args):
     target_username = args.get("target_username")
     direction = args.get("direction")
     max_depth = args.get("max_depth")
+    limit = args.get("limit", 50)
+    return_fields = args.get("return_fields")
 
     if (not target_id and not target_username) or not direction:
         return {"status": "error", "message": "Missing required arguments: ('target_id' or 'target_username') and 'direction'"}
@@ -66,13 +68,25 @@ def traverse_hierarchy(args):
     else:
         return {"status": "error", "message": f"Invalid direction: {direction}"}
 
-    return {
+    total_matches = len(results)
+    results = results[:limit]
+
+    if return_fields:
+        results = [{k: r.get(k) for k in return_fields if k in r} for r in results]
+
+    response = {
         "status": "success", 
         "target": target_node.get("username", target_id),
         "direction": direction,
         "count": len(results),
+        "total_matches": total_matches,
         "data": results
     }
+
+    if total_matches > limit:
+        response["message"] = f"Found {total_matches} records, but limited output to {limit} to prevent system overload. Ask user to narrow search."
+
+    return response
 
 if __name__ == "__main__":
     try:

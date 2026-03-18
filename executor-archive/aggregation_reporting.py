@@ -60,6 +60,8 @@ def generate_aggregation_report(args):
     filters = args.get("filters", {})
     target_ancestor_id = args.get("target_ancestor_id")
     target_ancestor_username = args.get("target_ancestor_username")
+    target_parent_id = args.get("target_parent_id")
+    target_parent_username = args.get("target_parent_username")
 
     if not metric:
         return {"status": "error", "message": "Missing required argument 'metric'"}
@@ -71,10 +73,18 @@ def generate_aggregation_report(args):
         if not target_ancestor_id:
             return {"status": "error", "message": f"Account with username '{target_ancestor_username}' not found."}
 
+    if not target_parent_id and target_parent_username:
+        target_parent_id = resolve_id_by_username(db, target_parent_username)
+        if not target_parent_id:
+            return {"status": "error", "message": f"Account with username '{target_parent_username}' not found."}
+
     filtered_data = []
 
     for record in db:
         if target_ancestor_id and target_ancestor_id not in record.get("ancestors", []):
+            continue
+
+        if target_parent_id and record.get("parent_id") != target_parent_id:
             continue
             
         passes_filters = True
