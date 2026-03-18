@@ -415,6 +415,7 @@ body {
 
 .history-date-group {
     margin-bottom: 12px;
+    min-width: 0;
 }
 
 .history-date-header {
@@ -449,6 +450,7 @@ body {
     overflow: hidden;
     transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
     opacity: 1;
+    min-width: 0;
 }
 
 .history-date-collapsible.collapsed {
@@ -465,6 +467,7 @@ body {
     flex-direction: column;
     gap: 2px;
     padding-left: 25px;
+    min-width: 0;
 }
 
 .history-see-more-btn {
@@ -611,6 +614,7 @@ body {
     display: flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
 }
 
 .history-item-row.renaming {
