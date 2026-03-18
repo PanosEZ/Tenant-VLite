@@ -1,11 +1,17 @@
 import boto3
+from botocore.config import Config
 import sys, asyncio
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import zmq
 import json
 import re
 import os
+
+
+
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 
 # Load AWS Credentials from JSON
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -63,7 +69,12 @@ client = boto3.client(
     "bedrock-runtime",
     region_name=REGION,
     aws_access_key_id=ACCESS_KEY,
-    aws_secret_access_key=SECRET_KEY
+    aws_secret_access_key=SECRET_KEY,
+    config=Config(
+        connect_timeout=5,
+        read_timeout=60,
+        retries={"max_attempts": 3, "mode": "standard"}
+    )
 )
 
 # --- ZMQ Setup ---

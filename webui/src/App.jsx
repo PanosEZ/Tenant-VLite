@@ -123,6 +123,7 @@ function App() {
     const [renamingChatId, setRenamingChatId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
+    const [collapsedGroups, setCollapsedGroups] = useState(new Set())
 
     // Smooth-close the history modal
     const closeHistory = useCallback(() => {
@@ -706,93 +707,166 @@ function App() {
                             </div>
                         </div>
                         <div className="history-list">
-                            {chatList.filter(chat =>
-                                (chat.title || chat.preview || '').toLowerCase().includes(searchQuery.toLowerCase())
-                            ).length === 0 ? (
-                                <div className="history-empty">
-                                    {chatList.length === 0 ? 'No saved chats yet' : 'No chats found'}
-                                </div>
-                            ) : (
-                                chatList
-                                    .filter(chat => (chat.title || chat.preview || '').toLowerCase().includes(searchQuery.toLowerCase()))
-                                    .map(chat => (
-                                        <div key={chat.id} className={`history-item-row ${renamingChatId === chat.id ? 'renaming' : ''}`}>
-                                            <div
-                                                className={`history-item ${chat.id === chatId ? 'active' : ''} ${renamingChatId === chat.id ? 'renaming' : ''}`}
-                                                onClick={() => { if (renamingChatId !== chat.id) loadChat(chat.id) }}
-                                            >
-                                                {renamingChatId === chat.id ? (
-                                                    <div className="history-rename-wrapper">
-                                                        <input
-                                                            className="history-rename-input"
-                                                            value={renameValue}
-                                                            onChange={e => setRenameValue(e.target.value)}
-                                                            onKeyDown={e => {
-                                                                if (e.key === 'Enter') renameChat(chat.id, renameValue)
-                                                                if (e.key === 'Escape') setRenamingChatId(null)
-                                                            }}
-                                                            onBlur={e => {
-                                                                if (!e.relatedTarget?.closest('.history-rename-actions')) {
-                                                                    renameChat(chat.id, renameValue)
-                                                                }
-                                                            }}
-                                                            autoFocus
-                                                            onClick={e => e.stopPropagation()}
-                                                        />
-                                                        <i className="fa-solid fa-pencil history-rename-icon" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="history-item-preview">
-                                                        {chat.title || chat.preview || 'Empty chat'}
-                                                    </div>
-                                                )}
-                                                {renamingChatId !== chat.id && (
-                                                    <button
-                                                        className="history-rename-btn"
-                                                        title="Rename chat"
-                                                        onClick={e => {
-                                                            e.stopPropagation()
-                                                            setRenamingChatId(chat.id)
-                                                            setRenameValue(chat.title || chat.preview || '')
-                                                        }}
-                                                    >
-                                                        <i className="fa-regular fa-pen-to-square" />
-                                                    </button>
-                                                )}
-                                                {renamingChatId !== chat.id && (
-                                                    <div className="history-item-date">
-                                                        {chat.updatedAt ? new Date(chat.updatedAt).toLocaleDateString() : ''}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {renamingChatId === chat.id && (
-                                                <div className="history-rename-actions" onClick={e => e.stopPropagation()}>
-                                                    <button
-                                                        className="history-rename-action-btn confirm"
-                                                        title="Confirm"
-                                                        onMouseDown={e => { e.preventDefault(); renameChat(chat.id, renameValue) }}
-                                                    >
-                                                        <i className="fa-solid fa-check" />
-                                                    </button>
-                                                    <button
-                                                        className="history-rename-action-btn cancel"
-                                                        title="Cancel"
-                                                        onMouseDown={e => { e.preventDefault(); setRenamingChatId(null) }}
-                                                    >
-                                                        <i className="fa-solid fa-xmark" />
-                                                    </button>
-                                                    <button
-                                                        className="history-rename-action-btn delete"
-                                                        title="Delete chat"
-                                                        onMouseDown={e => { e.preventDefault(); deleteChat(chat.id) }}
-                                                    >
-                                                        <i className="fa-solid fa-trash" />
-                                                    </button>
-                                                </div>
-                                            )}
+                            {(() => {
+                                const filteredChats = chatList.filter(chat =>
+                                    (chat.title || chat.preview || '').toLowerCase().includes(searchQuery.toLowerCase())
+                                );
+
+                                if (filteredChats.length === 0) {
+                                    return (
+                                        <div className="history-empty">
+                                            {chatList.length === 0 ? 'No saved chats yet' : 'No chats found'}
                                         </div>
-                                    ))
-                            )}
+                                    );
+                                }
+
+                                // Sort all filtered chats by date descending
+                                const sortedChats = [...filteredChats].sort((a, b) => {
+                                    const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                                    const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                                    return dateB - dateA;
+                                });
+
+                                // Group them by date
+                                const groupedChats = [];
+                                let currentGroup = null;
+
+                                sortedChats.forEach(chat => {
+                                    const date = chat.updatedAt ? new Date(chat.updatedAt) : new Date();
+                                    const dateString = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+                                    
+                                    if (!currentGroup || currentGroup.date !== dateString) {
+                                        currentGroup = { date: dateString, chats: [] };
+                                        groupedChats.push(currentGroup);
+                                    }
+                                    currentGroup.chats.push(chat);
+                                });
+
+                                const getRelativeTime = (dateString) => {
+                                    if (!dateString) return '';
+                                    const date = new Date(dateString);
+                                    const now = new Date();
+                                    // Reset time part to compare just dates
+                                    const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                                    const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                    const diffTime = Math.abs(nowDay - dateDay);
+                                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                                    
+                                    if (diffDays === 0) return 'Today';
+                                    if (diffDays === 1) return '1d';
+                                    if (diffDays < 7) return `${diffDays}d`;
+                                    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`;
+                                    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo`;
+                                    return `${Math.floor(diffDays / 365)}y`;
+                                };
+
+                                const toggleGroup = (dateString) => {
+                                    setCollapsedGroups(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(dateString)) next.delete(dateString);
+                                        else next.add(dateString);
+                                        return next;
+                                    });
+                                };
+
+                                return groupedChats.map(group => (
+                                    <div key={group.date} className="history-date-group">
+                                        <div 
+                                            className="history-date-header" 
+                                            onClick={() => toggleGroup(group.date)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <i className={`fa-regular ${collapsedGroups.has(group.date) ? 'fa-folder' : 'fa-folder-open'}`} />
+                                            <span>{group.date}</span>
+                                            <i 
+                                                className={`fa-solid fa-chevron-down history-date-chevron ${collapsedGroups.has(group.date) ? 'collapsed' : ''}`} 
+                                                style={{ marginLeft: 'auto', fontSize: '10px', transition: 'transform 0.2s' }}
+                                            />
+                                        </div>
+                                        {!collapsedGroups.has(group.date) && (
+                                            <div className="history-date-chats">
+                                                {group.chats.map(chat => (
+                                                <div key={chat.id} className={`history-item-row ${renamingChatId === chat.id ? 'renaming' : ''}`}>
+                                                    <div
+                                                        className={`history-item ${chat.id === chatId ? 'active' : ''} ${renamingChatId === chat.id ? 'renaming' : ''}`}
+                                                        onClick={() => { if (renamingChatId !== chat.id) loadChat(chat.id) }}
+                                                    >
+                                                        {renamingChatId === chat.id ? (
+                                                            <div className="history-rename-wrapper">
+                                                                <input
+                                                                    className="history-rename-input"
+                                                                    value={renameValue}
+                                                                    onChange={e => setRenameValue(e.target.value)}
+                                                                    onKeyDown={e => {
+                                                                        if (e.key === 'Enter') renameChat(chat.id, renameValue)
+                                                                        if (e.key === 'Escape') setRenamingChatId(null)
+                                                                    }}
+                                                                    onBlur={e => {
+                                                                        if (!e.relatedTarget?.closest('.history-rename-actions')) {
+                                                                            renameChat(chat.id, renameValue)
+                                                                        }
+                                                                    }}
+                                                                    autoFocus
+                                                                    onClick={e => e.stopPropagation()}
+                                                                />
+                                                                <i className="fa-solid fa-pencil history-rename-icon" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="history-item-preview">
+                                                                {chat.title || chat.preview || 'Empty chat'}
+                                                            </div>
+                                                        )}
+                                                        {renamingChatId !== chat.id && (
+                                                            <button
+                                                                className="history-rename-btn"
+                                                                title="Rename chat"
+                                                                onClick={e => {
+                                                                    e.stopPropagation()
+                                                                    setRenamingChatId(chat.id)
+                                                                    setRenameValue(chat.title || chat.preview || '')
+                                                                }}
+                                                            >
+                                                                <i className="fa-regular fa-pen-to-square" />
+                                                            </button>
+                                                        )}
+                                                        {renamingChatId !== chat.id && (
+                                                            <div className="history-item-date">
+                                                                {getRelativeTime(chat.updatedAt)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {renamingChatId === chat.id && (
+                                                        <div className="history-rename-actions" onClick={e => e.stopPropagation()}>
+                                                            <button
+                                                                className="history-rename-action-btn confirm"
+                                                                title="Confirm"
+                                                                onMouseDown={e => { e.preventDefault(); renameChat(chat.id, renameValue) }}
+                                                            >
+                                                                <i className="fa-solid fa-check" />
+                                                            </button>
+                                                            <button
+                                                                className="history-rename-action-btn cancel"
+                                                                title="Cancel"
+                                                                onMouseDown={e => { e.preventDefault(); setRenamingChatId(null) }}
+                                                            >
+                                                                <i className="fa-solid fa-xmark" />
+                                                            </button>
+                                                            <button
+                                                                className="history-rename-action-btn delete"
+                                                                title="Delete chat"
+                                                                onMouseDown={e => { e.preventDefault(); deleteChat(chat.id) }}
+                                                            >
+                                                                <i className="fa-solid fa-trash" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        )}
+                                    </div>
+                                ));
+                            })()}
                         </div>
                     </div>
                 </div>

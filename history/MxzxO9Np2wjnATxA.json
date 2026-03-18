@@ -1,0 +1,50 @@
+{
+    "id": "MxzxO9Np2wjnATxA",
+    "title": "hey",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey"
+                }
+            ],
+            "timestamp": "2026-03-17T13:56:24.278Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey there! How can I help you today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T13:56:24.279Z",
+            "total_tokens": 586
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "whats up"
+                }
+            ],
+            "timestamp": "2026-03-17T13:56:29.094Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Not much! Just here and ready to help you out with anything related to the user management platform — whether that's looking up accounts, checking hierarchies, running reports, verifying compliance, or checking system integrity. \n\nWhat's on your mind?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T13:56:29.094Z",
+            "total_tokens": 646
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-17T13:56:31Z"
+}
