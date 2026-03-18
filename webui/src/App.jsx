@@ -124,6 +124,7 @@ function App() {
     const [renameValue, setRenameValue] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [collapsedGroups, setCollapsedGroups] = useState(new Set())
+    const [expandedGroups, setExpandedGroups] = useState(new Set())
 
     // Smooth-close the history modal
     const closeHistory = useCallback(() => {
@@ -769,23 +770,29 @@ function App() {
                                     });
                                 };
 
-                                return groupedChats.map(group => (
+                                return groupedChats.map(group => {
+                                    const isCollapsed = collapsedGroups.has(group.date);
+                                    const isFullyExpanded = expandedGroups.has(group.date);
+                                    const visibleChats = isFullyExpanded ? group.chats : group.chats.slice(0, 5);
+                                    const hasMore = group.chats.length > 5;
+
+                                    return (
                                     <div key={group.date} className="history-date-group">
                                         <div 
                                             className="history-date-header" 
                                             onClick={() => toggleGroup(group.date)}
                                             style={{ cursor: 'pointer' }}
                                         >
-                                            <i className={`fa-regular ${collapsedGroups.has(group.date) ? 'fa-folder' : 'fa-folder-open'}`} />
+                                            <i className={`fa-regular ${isCollapsed ? 'fa-folder' : 'fa-folder-open'}`} />
                                             <span>{group.date}</span>
                                             <i 
-                                                className={`fa-solid fa-chevron-down history-date-chevron ${collapsedGroups.has(group.date) ? 'collapsed' : ''}`} 
+                                                className={`fa-solid fa-chevron-down history-date-chevron ${isCollapsed ? 'collapsed' : ''}`} 
                                                 style={{ marginLeft: 'auto', fontSize: '10px', transition: 'transform 0.2s' }}
                                             />
                                         </div>
-                                        {!collapsedGroups.has(group.date) && (
+                                        <div className={`history-date-collapsible ${isCollapsed ? 'collapsed' : ''}`}>
                                             <div className="history-date-chats">
-                                                {group.chats.map(chat => (
+                                                {visibleChats.map(chat => (
                                                 <div key={chat.id} className={`history-item-row ${renamingChatId === chat.id ? 'renaming' : ''}`}>
                                                     <div
                                                         className={`history-item ${chat.id === chatId ? 'active' : ''} ${renamingChatId === chat.id ? 'renaming' : ''}`}
@@ -862,10 +869,25 @@ function App() {
                                                     )}
                                                 </div>
                                             ))}
+                                            {hasMore && !isFullyExpanded && (
+                                                <button 
+                                                    className="history-see-more-btn"
+                                                    onClick={() => {
+                                                        setExpandedGroups(prev => {
+                                                            const next = new Set(prev);
+                                                            next.add(group.date);
+                                                            return next;
+                                                        });
+                                                    }}
+                                                >
+                                                    Threads +{group.chats.length - 5}
+                                                </button>
+                                            )}
                                         </div>
-                                        )}
+                                        </div>
                                     </div>
-                                ));
+                                    );
+                                });
                             })()}
                         </div>
                     </div>

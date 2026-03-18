@@ -443,11 +443,49 @@ body {
     transform: rotate(-90deg);
 }
 
+.history-date-collapsible {
+    display: grid;
+    grid-template-rows: 1fr;
+    overflow: hidden;
+    transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
+    opacity: 1;
+}
+
+.history-date-collapsible.collapsed {
+    grid-template-rows: 0fr;
+    opacity: 0;
+}
+
+.history-date-collapsible > .history-date-chats {
+    min-height: 0;
+}
+
 .history-date-chats {
     display: flex;
     flex-direction: column;
     gap: 2px;
     padding-left: 25px;
+}
+
+.history-see-more-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-family: var(--font);
+    text-align: left;
+    padding: 8px 16px;
+    margin-top: 4px;
+    cursor: pointer;
+    border-radius: 24px;
+    transition: all 0.15s;
+    display: inline-block;
+    width: max-content;
+}
+
+.history-see-more-btn:hover {
+    color: var(--text-primary);
+
 }
 
 .history-empty {
