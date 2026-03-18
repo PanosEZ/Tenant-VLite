@@ -50,19 +50,29 @@ def evaluate_condition(record_val, condition):
             
     return True
 
+def resolve_id_by_username(db, username):
+    match = next((r for r in db if isinstance(r.get("username"), str) and r["username"].lower() == username.lower()), None)
+    return match.get("id") if match else None
+
 def generate_aggregation_report(args):
     metric = args.get("metric")
     group_by = args.get("group_by")
     filters = args.get("filters", {})
     target_ancestor_id = args.get("target_ancestor_id")
+    target_ancestor_username = args.get("target_ancestor_username")
 
     if not metric:
         return {"status": "error", "message": "Missing required argument 'metric'"}
 
     db = load_db()
+
+    if not target_ancestor_id and target_ancestor_username:
+        target_ancestor_id = resolve_id_by_username(db, target_ancestor_username)
+        if not target_ancestor_id:
+            return {"status": "error", "message": f"Account with username '{target_ancestor_username}' not found."}
+
     filtered_data = []
 
-    # Apply pre-aggregation filters
     for record in db:
         if target_ancestor_id and target_ancestor_id not in record.get("ancestors", []):
             continue

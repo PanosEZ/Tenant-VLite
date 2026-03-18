@@ -10,20 +10,30 @@ def load_db():
     with open(DB_FILE, 'r') as f:
         return json.load(f)
 
+def resolve_target(db, target_id=None, target_username=None):
+    if target_id:
+        return next((r for r in db if r.get("id") == target_id), None)
+    if target_username:
+        return next((r for r in db if isinstance(r.get("username"), str) and r["username"].lower() == target_username.lower()), None)
+    return None
+
 def traverse_hierarchy(args):
     target_id = args.get("target_id")
+    target_username = args.get("target_username")
     direction = args.get("direction")
     max_depth = args.get("max_depth")
 
-    if not target_id or not direction:
-        return {"status": "error", "message": "Missing required arguments: 'target_id' and 'direction'"}
+    if (not target_id and not target_username) or not direction:
+        return {"status": "error", "message": "Missing required arguments: ('target_id' or 'target_username') and 'direction'"}
 
     db = load_db()
     
-    # 1. Find the target node
-    target_node = next((r for r in db if r.get("id") == target_id), None)
+    target_node = resolve_target(db, target_id, target_username)
     if not target_node:
-        return {"status": "error", "message": f"Account with ID {target_id} not found."}
+        identifier = target_id or target_username
+        return {"status": "error", "message": f"Account '{identifier}' not found."}
+
+    target_id = target_node.get("id")
 
     results = []
 

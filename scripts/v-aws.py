@@ -58,9 +58,9 @@ CRITICAL RULE FOR LONG TERM MEMORY ("DIARY"):
 When you finally answer the user's request after executing command(s) (i.e. you have completed a workflow and are providing the final answer), you MUST write a single, rolling summary paragraph wrapped in <CONTEXT>...</CONTEXT> tags.
 
 HOW TO WRITE THE DIARY:
-If there is an existing "STORY SO FAR (Diary)", you MUST NOT just report what you just did. Instead, you must rewrite the ENTIRE diary into a single, highly compressed paragraph that combines the most critical old facts with your new findings. The diary should evolve and reshape itself, slowly dropping irrelevant old details while adding current facts.
-Example: <CONTEXT>Previously, user asked about verify status. I found 3 unverified users (user1, agent1, user3). Today, user asked for their phone numbers. I looked them up and found none of them have phone numbers provided.</CONTEXT>
-Do NOT use the <CONTEXT> tag if you are just chatting and the current state of the user's message does not include the need for the execution of any commands.
+Rewrite the ENTIRE existing diary into a single, highly compressed paragraph wrapped in <CONTEXT>...</CONTEXT>. 
+You must aggressively drop irrelevant or outdated data, but you MUST strictly preserve the exact tool function names, successful parameter structures, discovered system constraints, and persisting critical facts from previous turns.
+Your goal is to maintain a reusable tool-execution playbook alongside the evolving data state. Do NOT use the <CONTEXT> tag for purely conversational turns where no commands were executed.
 
 """
 
