@@ -451,6 +451,7 @@ body {
     transition: grid-template-rows 0.25s ease, opacity 0.25s ease;
     opacity: 1;
     min-width: 0;
+    margin-right: 10px;
 }
 
 .history-date-collapsible.collapsed {
@@ -465,9 +466,47 @@ body {
 .history-date-chats {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding-left: 25px;
+    gap: 6px;
+    padding-left: 14px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin-left: 25px;
     min-width: 0;
+}
+
+.history-item-row,
+.history-see-more-btn {
+    position: relative;
+}
+
+.history-item-row::before,
+.history-see-more-btn::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: -20px;
+    height: calc(50% + 20px);
+    width: 10px;
+    border-left: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-bottom-left-radius: 8px;
+    pointer-events: none;
+}
+
+.history-item-row::after,
+.history-see-more-btn::after {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: -20px;
+    height: calc(100% + 40px);
+    border-left: 1px solid var(--border);
+    pointer-events: none;
+}
+
+.history-item-row:last-child::after,
+.history-see-more-btn:last-child::after {
+    display: none;
 }
 
 .history-see-more-btn {
@@ -478,7 +517,6 @@ body {
     font-family: var(--font);
     text-align: left;
     padding: 8px 16px;
-    margin-top: 4px;
     cursor: pointer;
     border-radius: 24px;
     transition: all 0.15s;
@@ -514,7 +552,7 @@ body {
     border-radius: 24px;
     transition: all 0.15s;
     gap: 12px;
-    margin-top: 5px;
+    margin-top: -2px;
 }
 
 .history-item:not(.renaming):hover {
@@ -619,7 +657,7 @@ body {
 
 .history-item-row.renaming {
 
-    margin-left: -8px;
+    margin-left: 0px;
     margin-right: -8px;
     padding-left: 8px;
     padding-right: 8px;

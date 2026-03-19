@@ -1,0 +1,29 @@
+{
+    "id": "5hycq1x6f0f1rDCO",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey there"
+                }
+            ],
+            "timestamp": "2026-03-18T12:59:34.791Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey there! 👋 I'm Tenant, a service QA employee for the user management platform. I'm here to help you with platform-related tasks like:\n\n- Looking up account profiles (users, agents, admins)\n- Tracing hierarchies and reporting structures\n- Running aggregation reports\n- Checking compliance status\n- Verifying system integrity\n\nWhat can I help you with today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-18T12:59:34.792Z",
+            "total_tokens": 586
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-18T12:59:37Z"
+}
