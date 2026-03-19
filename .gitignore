@@ -11,6 +11,9 @@ __pycache__/
 # Node.js dependencies
 node_modules/
 
+# Build output
+webui/dist/
+
 # OS and Editor files
 .vscode/
 .idea/

@@ -816,7 +816,7 @@ function App() {
                                                                     autoFocus
                                                                     onClick={e => e.stopPropagation()}
                                                                 />
-                                                                <i className="fa-solid fa-pencil history-rename-icon" />
+                                                                
                                                             </div>
                                                         ) : (
                                                             <div className="history-item-preview">

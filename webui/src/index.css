@@ -275,6 +275,7 @@ body {
     display: flex;
     flex-direction: column;
     padding: 16px 20px 12px;
+    padding-bottom: 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -498,7 +499,7 @@ body {
     content: '';
     position: absolute;
     left: -14px;
-    top: -20px;
+    top: -25px;
     height: calc(100% + 40px);
     border-left: 1px solid var(--border);
     pointer-events: none;
@@ -583,7 +584,7 @@ body {
 }
 
 .history-item-date {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-dim);
     flex-shrink: 0;
     margin-right: 10px;
@@ -774,7 +775,7 @@ body {
         }
 
         to {
-            width: clamp(340px, 30vw, 540px);
+            width: clamp(340px, 30vw, 440px);
             padding-left: 16px;
             opacity: 1;
         }
@@ -782,7 +783,7 @@ body {
 
     @keyframes sidebarSlideOut {
         from {
-            width: clamp(340px, 30vw, 540px);
+            width: clamp(340px, 30vw, 440px);
             padding-left: 16px;
             opacity: 1;
         }
@@ -888,7 +889,7 @@ body {
     overflow: hidden;
     flex-shrink: 0;
     box-shadow:
-        0 0 0 4px #444444,
+        0 0 0 4px var(--bg-primary),
         0 0 0 6px #ffffff;
 }
 
@@ -913,7 +914,9 @@ body {
 }
 
 .message-sender {
-    color: #6a9bd6;
+    color: #74a9e9;
+
+    font-size: 14px;
 }
 
 .message-dot {
@@ -929,9 +932,9 @@ body {
 }
 
 .token-badge {
-    color: #4ade80;
+    color: #84e995;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 800;
     letter-spacing: 0.3px;
     margin-left: 6px;
     opacity: 0.85;

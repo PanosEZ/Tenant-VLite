@@ -1,0 +1,29 @@
+{
+    "id": "SxovkOnDTxIdCkO6",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "are you online?"
+                }
+            ],
+            "timestamp": "2026-03-19T10:09:51.136Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Yes, I'm here and ready to help. I'm Tenant, a service QA employee for the user management platform. I can assist with looking up accounts, tracing hierarchies, running reports, checking compliance, and verifying system integrity.\n\nWhat can I do for you today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-19T10:09:51.137Z",
+            "total_tokens": 567
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-19T10:09:53Z"
+}
