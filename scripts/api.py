@@ -67,6 +67,7 @@ async def history_list():
                 "id": data.get("id", fname.replace(".json", "")),
                 "title": data.get("title", ""),
                 "preview": preview,
+                "context_diary": data.get("context_diary", ""),
                 "updatedAt": data.get("updatedAt", ""),
             })
         except Exception:
@@ -161,7 +162,7 @@ import re
 def clean_bot_text(text):
     """Strip internal tool commands from bot reply text."""
     t = re.sub(r'<FUNCTION_CALL>[\s\S]*?</FUNCTION_CALL>', '', text)
-    t = re.sub(r'<CONTEXT>[\s\S]*?</CONTEXT>', '', t)
+    t = re.sub(r'<CONTEXT>[\s\S]*?</CONTEXT>', '', t, flags=re.IGNORECASE)
     t = re.sub(r'^read\([^)]*\)\s*$', '', t, flags=re.MULTILINE)
     return t.strip()
 

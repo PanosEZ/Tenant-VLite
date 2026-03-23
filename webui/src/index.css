@@ -521,13 +521,28 @@ body {
     cursor: pointer;
     border-radius: 24px;
     transition: all 0.15s;
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: max-content;
 }
 
 .history-see-more-btn:hover {
     color: var(--text-primary);
+}
 
+.history-see-more-icon {
+    width: 11px;
+    height: 11px;
+    object-fit: contain;
+    opacity: 1;
+    transition: opacity 0.15s;
+    filter: invert(1);
+    mix-blend-mode: screen;
+}
+
+.history-see-more-btn:hover .history-see-more-icon {
+    opacity: 1;
 }
 
 .history-empty {
@@ -590,7 +605,8 @@ body {
     margin-right: 10px;
 }
 
-.history-rename-btn {
+.history-rename-btn,
+.history-diary-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -605,13 +621,16 @@ body {
     flex-shrink: 0;
     opacity: 0;
     transition: opacity 0.15s, background 0.15s, color 0.15s;
+    margin-right: -10px;
 }
 
-.history-item:hover .history-rename-btn {
+.history-item:hover .history-rename-btn,
+.history-item:hover .history-diary-btn {
     opacity: 1;
 }
 
-.history-rename-btn:hover {
+.history-rename-btn:hover,
+.history-diary-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
 }
@@ -794,6 +813,106 @@ body {
             opacity: 0;
         }
     }
+}
+
+/* ─── Context Diary Modal ────────────────────────────── */
+.diary-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    animation: overlayFadeIn 0.3s ease;
+}
+
+.diary-modal-overlay.closing {
+    animation: overlayFadeOut 0.28s ease forwards;
+}
+
+.diary-modal {
+    background: #1a1a1a;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+    animation: modalSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.diary-modal.closing {
+    animation: modalSlideOut 0.28s ease forwards;
+}
+
+.diary-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.diary-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.diary-modal-title i {
+    color: #4ade80;
+}
+
+.diary-modal-close {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-dim);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.diary-modal-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+}
+
+.diary-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.diary-modal-text {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.diary-modal-empty {
+    margin: 0;
+    font-style: italic;
+    color: var(--text-dim);
+    text-align: center;
 }
 
 /* ─── Messages ───────────────────────────────────────── */

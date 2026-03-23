@@ -125,6 +125,8 @@ function App() {
     const [searchQuery, setSearchQuery] = useState('')
     const [collapsedGroups, setCollapsedGroups] = useState(new Set())
     const [expandedGroups, setExpandedGroups] = useState(new Set())
+    const [selectedDiaryChat, setSelectedDiaryChat] = useState(null)
+    const [closingDiary, setClosingDiary] = useState(false)
 
     // Smooth-close the history modal
     const closeHistory = useCallback(() => {
@@ -135,6 +137,16 @@ function App() {
             setClosingHistory(false)
         }, 280)
     }, [closingHistory])
+
+    // Smooth-close the diary modal
+    const closeDiary = useCallback(() => {
+        if (closingDiary) return
+        setClosingDiary(true)
+        setTimeout(() => {
+            setSelectedDiaryChat(null)
+            setClosingDiary(false)
+        }, 280)
+    }, [closingDiary])
 
     // Load a chat from history
     const loadChat = useCallback(async (id, skipPush = false) => {
@@ -660,6 +672,28 @@ function App() {
 
     return (
         <div className="app-layout">
+            {/* Context Diary Modal */}
+            {selectedDiaryChat && (
+                <div className={`diary-modal-overlay ${closingDiary ? 'closing' : ''}`} onClick={closeDiary}>
+                    <div className={`diary-modal ${closingDiary ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
+                        <div className="diary-modal-header">
+                            <h3 className="diary-modal-title">
+                                <i className="fa-solid fa-book-bookmark" style={{ marginRight: '12px', fontSize: '16px', color: '#ffffff' }} />
+                                Context - Memory
+                            </h3>
+                            <button className="diary-modal-close" onClick={closeDiary}>✕</button>
+                        </div>
+                        <div className="diary-modal-body">
+                            {selectedDiaryChat.context_diary ? (
+                                <p className="diary-modal-text">{selectedDiaryChat.context_diary}</p>
+                            ) : (
+                                <p className="diary-modal-empty">No context diary available for this chat.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* History Modal Overlay / Sidebar */}
             {showHistory && (
                 <div className={`history-overlay ${closingHistory ? 'closing' : ''}`} onClick={closeHistory}>
@@ -825,6 +859,24 @@ function App() {
                                                         )}
                                                         {renamingChatId !== chat.id && (
                                                             <button
+                                                                className="history-diary-btn"
+                                                                title="Context Diary"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation()
+                                                                    try {
+                                                                        const res = await fetch(`${GATEWAY_URL}/history/${chat.id}`)
+                                                                        const data = await res.json()
+                                                                        setSelectedDiaryChat({ ...chat, context_diary: data.context_diary })
+                                                                    } catch (err) {
+                                                                        setSelectedDiaryChat(chat)
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <i className="fa-solid fa-book-bookmark" />
+                                                            </button>
+                                                        )}
+                                                        {renamingChatId !== chat.id && (
+                                                            <button
                                                                 className="history-rename-btn"
                                                                 title="Rename chat"
                                                                 onClick={e => {
@@ -880,7 +932,12 @@ function App() {
                                                         });
                                                     }}
                                                 >
-                                                    Threads +{group.chats.length - 5}
+                                                    <span>Threads +{group.chats.length - 5}</span>
+                                                    <img 
+                                                        src={`/dot-dive/dotdive-${(Array.from(group.date).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 6) + 1}.png`} 
+                                                        alt=""
+                                                        className="history-see-more-icon"
+                                                    />
                                                 </button>
                                             )}
                                         </div>
@@ -909,6 +966,23 @@ function App() {
                         </button>
                     </div>
                     <div className="header-right">
+                        {chatId && (
+                            <button
+                                className="header-action-btn"
+                                title="Context Diary"
+                                onClick={async () => {
+                                    try {
+                                        const res = await fetch(`${GATEWAY_URL}/history/${chatId}`)
+                                        const data = await res.json()
+                                        setSelectedDiaryChat({ id: chatId, context_diary: data.context_diary })
+                                    } catch (err) {
+                                        setSelectedDiaryChat({ id: chatId })
+                                    }
+                                }}
+                            >
+                                <i className="fa-solid fa-book-bookmark header-action-icon" style={{ fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff' }} />
+                            </button>
+                        )}
                         <button
                             className={`header-action-btn ${showHistory ? 'active' : ''}`}
                             onClick={() => showHistory ? closeHistory() : setShowHistory(true)}

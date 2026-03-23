@@ -58,9 +58,15 @@ CRITICAL RULE FOR LONG TERM MEMORY ("DIARY"):
 When you finally answer the user's request after executing command(s) (i.e. you have completed a workflow and are providing the final answer), you MUST write a single, rolling summary paragraph wrapped in <CONTEXT>...</CONTEXT> tags.
 
 HOW TO WRITE THE DIARY:
-Rewrite the ENTIRE existing diary into a single, highly compressed paragraph wrapped in <CONTEXT>...</CONTEXT>. 
-You must aggressively drop irrelevant or outdated data, but you MUST strictly preserve the exact tool function names, successful parameter structures, discovered system constraints, and persisting critical facts from previous turns.
-Your goal is to maintain a reusable tool-execution playbook alongside the evolving data state. Do NOT use the <CONTEXT> tag for purely conversational turns where no commands were executed.
+Rewrite the ENTIRE existing diary into a single, highly compressed paragraph wrapped in <CONTEXT>...</CONTEXT>.
+Write the diary constructively and not destructively, i.e. do not remove the previous diary content. Instead, merge the new learnings to the existing diary content.
+use natural converstation filler when writing the diary.
+do not keep facts like names, dates, numbers, etc. Keep the logic , mechanics and patterns only.
+use natural language to describe what you learned about the logic and mechanics of the systemand how it may help you later.
+strictly preserve learned patterns, successful logic flows, discovered system constraints, and persisting mechanics about how the system works that may help you in the future.
+Your goal is to maintain an evolving understanding of the system's workflow and logic. Do NOT use the <CONTEXT> tag for purely conversational turns where no commands were executed.
+the diary should not be longer than 300 words.
+STRICTLY never store attributes in the diary. store only behaviors on a conceptual level. store functional concepts and not direct database information.
 
 """
 

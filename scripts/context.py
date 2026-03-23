@@ -32,7 +32,7 @@ while True:
     except (json.JSONDecodeError, AttributeError):
         continue
 
-    match = re.search(r'<CONTEXT>([\s\S]*?)</CONTEXT>', message)
+    match = re.search(r'<CONTEXT>([\s\S]*?)</CONTEXT>', message, re.IGNORECASE)
     if match and chat_id:
         context_text = match.group(1).strip()
         chat_path = os.path.join(HISTORY_DIR, f"{chat_id}.json")
