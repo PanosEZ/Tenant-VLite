@@ -1,0 +1,93 @@
+{
+    "id": "HlHCWHNGlFfX4e5d",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey"
+                }
+            ],
+            "timestamp": "2026-03-16T23:25:19.570Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey there! How can I help you today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-16T23:25:19.570Z",
+            "total_tokens": 586
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "can you give me the mail of the admin"
+                }
+            ],
+            "timestamp": "2026-03-16T23:25:47.064Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I can help you look up an admin's email, but I'll need a bit more information. Could you specify which admin you're referring to? For example:\n\n- A specific admin username or ID\n- Or if you want me to search for admins matching certain criteria\n\nOnce you clarify, I can pull up the relevant lookup functions to find their email address."
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-16T23:25:47.064Z",
+            "total_tokens": 676
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "just search who is the admin"
+                }
+            ],
+            "timestamp": "2026-03-16T23:25:58.763Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Let me pull up the manual to find the exact function for searching admin accounts.{{TOOL:account_lookup}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-16T23:25:58.763Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I can search for admin accounts using the lookup function. Let me query for all admin accounts and return their usernames and email addresses.{{TOOL:lookup_account}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-16T23:25:59.728Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I found one admin account in the system:\n\n| Username | Email | ID |\n|----------|-------|-----|\n| admin | admin@localhost | 1 |\n\nThe admin's email address is **admin@localhost**."
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-16T23:26:01.139Z",
+            "total_tokens": 3696
+        }
+    ],
+    "context_diary": "User asked to find who is the admin. I searched the database and found 1 admin account with username \"admin\", email \"admin@localhost\", and ID \"1\".",
+    "updatedAt": "2026-03-16T23:26:02Z"
+}

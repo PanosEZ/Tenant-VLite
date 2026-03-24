@@ -1,0 +1,114 @@
+{
+    "id": "O3kyYB3U0uSvJpHp",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey"
+                }
+            ],
+            "timestamp": "2026-03-17T08:44:17.317Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey there! I'm Tenant, a service QA employee for the user management platform. How can I help you today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:44:17.317Z",
+            "total_tokens": 599
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "whats up"
+                }
+            ],
+            "timestamp": "2026-03-17T08:44:29.796Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Not much! Just here ready to help with any user management platform questions you might have. Whether it's looking up accounts, checking hierarchies, running reports, verifying compliance, or checking system integrity — I'm your person.\n\nWhat's on your mind?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:44:29.796Z",
+            "total_tokens": 660
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "can you tell me how many agents in the app"
+                }
+            ],
+            "timestamp": "2026-03-17T08:44:50.692Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I can help you find that information! Let me pull up the manual to see the right function for counting agents.{{TOOL:aggregation_reporting}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:44:50.692Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Got it! I need to use the `generate_aggregation_report` function to count agents. I'll set the metric to \"count\" and filter by type to get only agents.{{TOOL:generate_aggregation_report}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:44:54.067Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "There are **1,498 agents** in the platform."
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:44:57.567Z",
+            "total_tokens": 3584
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "Ah nice okay"
+                }
+            ],
+            "timestamp": "2026-03-17T08:46:25.771Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Glad I could help! Is there anything else you'd like to know about the agents or other account types in the platform?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:48:55.305Z",
+            "total_tokens": 743
+        }
+    ],
+    "context_diary": "User asked for the total number of agents in the app. I used the aggregation reporting function to count all records with type \"agent\" and found there are 1,498 agents.",
+    "updatedAt": "2026-03-17T08:48:56Z"
+}

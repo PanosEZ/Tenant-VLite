@@ -1,0 +1,29 @@
+{
+    "id": "NZjYcDFOOQ0MZRkV",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey"
+                }
+            ],
+            "timestamp": "2026-03-17T08:37:55.231Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey there! How can I help you today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-17T08:37:55.232Z",
+            "total_tokens": 586
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-17T08:37:56Z"
+}

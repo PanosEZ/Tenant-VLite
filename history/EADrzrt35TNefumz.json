@@ -1,0 +1,71 @@
+{
+    "id": "EADrzrt35TNefumz",
+    "title": "hey",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey"
+                }
+            ],
+            "timestamp": "2026-03-16T20:56:42.723Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey there! How can I help you today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "active_tool": "",
+            "timestamp": "2026-03-16T20:56:42.724Z"
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "whats up"
+                }
+            ],
+            "timestamp": "2026-03-16T20:56:47.997Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Not much! Just here ready to help you with any account, hierarchy, reporting, compliance, or system integrity questions you might have about the platform. What's on your mind?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "active_tool": "",
+            "timestamp": "2026-03-16T20:56:47.997Z"
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "give me the mail of the admin"
+                }
+            ],
+            "timestamp": "2026-03-16T20:57:00.025Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I can help you look up an admin's email, but I need a bit more info. Could you specify which admin you're referring to? For example, do you have their username, user ID, or any other identifying details?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "active_tool": "",
+            "timestamp": "2026-03-16T20:57:00.025Z"
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-16T20:57:02Z"
+}

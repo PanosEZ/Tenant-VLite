@@ -1,0 +1,51 @@
+{
+    "id": "gDMt0t4y2t9Idqkk",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "can you tell me how many users in the app use USD"
+                }
+            ],
+            "timestamp": "2026-03-19T08:34:54.450Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Let me pull up the manual to find the right function for that.{{READ:aggregation_reporting}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-19T08:34:54.451Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I need to count users who use USD as their currency. Based on the manual, I should use `generate_aggregation_report` with:\n- `metric`: \"count\" (for raw totals)\n- `filters`: to filter by currency = \"USD\" and type = \"USER\"{{TOOL:generate_aggregation_report}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-19T08:34:55.464Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "There are **2,684 users** in the app who use USD as their currency."
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-19T08:34:57.577Z",
+            "total_tokens": 2929
+        }
+    ],
+    "context_diary": "Successfully used `generate_aggregation_report` with parameters `{\"metric\": \"count\", \"filters\": {\"type\": \"USER\", \"currency\": \"USD\"}}` to retrieve user counts by currency. Result: 2,684 USD users. Tool supports metrics: count, sum, average, min, max, distribution; accepts filters for type, status, currency, date range, hierarchy_level, and custom fields.",
+    "updatedAt": "2026-03-19T08:34:58Z"
+}

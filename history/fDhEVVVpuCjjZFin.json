@@ -1,0 +1,50 @@
+{
+    "id": "fDhEVVVpuCjjZFin",
+    "title": "hey, whats up",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey, whats up"
+                }
+            ],
+            "timestamp": "2026-03-18T08:15:53.273Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey! Not much here — just ready to help out with anything related to the user management platform. Whether you need to look up accounts, check hierarchies, run reports, verify compliance, or check system integrity, I'm here for it.\n\nWhat's on your mind?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-18T08:15:53.273Z",
+            "total_tokens": 632
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "mm nice"
+                }
+            ],
+            "timestamp": "2026-03-18T08:16:02.520Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Cool, cool. Let me know if you need anything — I'm here when you're ready to dive into platform stuff."
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-18T08:16:02.520Z",
+            "total_tokens": 667
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-18T08:16:03Z"
+}
