@@ -11,11 +11,11 @@ Queries the database for direct document matches. To protect the system from mem
 * `return_fields` (list of strings, optional): Specify EXACTLY which fields to return (e.g., `["username", "id"]`). If the user only asks for names, only request names.
 * `limit` (integer, optional): Maximum number of records to return. Default is 50.
 * `id` (string, optional): Exact `id` (e.g., "1", "7").
-* `username` (string, optional): Exact username (e.g., "admin", "agent1").
+* `username` (string, optional): Exact username (e.g., "admin", "agent1"). (note: if the user is asking for the admin of the app, just see how many admins are there or if there is only one or few just respond accordingly)
 * `email` (string, optional): Exact email address.
 * `type` (string, optional): Enum [`ADMIN`, `CURRENCY_AGENT`, `AGENT`, `USER`].
 * `status` (string, optional): Enum [`ACTIVE`, etc.].
-* `currency` (string, optional): Enum [`EUR`, `TRY`, `USD`].
+* `currency` (string, optional): Enum [`EUR`, `TRY`, `USD`,`GBP`].
 * `is_test_account` (boolean, optional): Filter for test accounts.
 * `is_system_account` (boolean, optional): Filter for system accounts.
 * **Any other document field** (optional): You may also filter by ANY field that exists in the database documents.

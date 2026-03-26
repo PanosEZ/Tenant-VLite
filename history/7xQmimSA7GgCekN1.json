@@ -1,0 +1,29 @@
+{
+    "id": "7xQmimSA7GgCekN1",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "hey whats up"
+                }
+            ],
+            "timestamp": "2026-03-25T18:13:02.582Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Hey! Not much — just here helping out with Tenant platform questions. What's on your mind today?"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-25T18:13:02.584Z",
+            "total_tokens": 644
+        }
+    ],
+    "context_diary": "",
+    "updatedAt": "2026-03-25T18:13:04Z"
+}

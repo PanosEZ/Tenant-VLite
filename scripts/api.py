@@ -15,8 +15,36 @@ import uvicorn
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-MODEL_ID = "moonshotai.kimi-k2.5"
-HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "history")
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_PATH = os.path.join(_SCRIPT_DIR, "models-list.json")
+HISTORY_DIR = os.path.join(os.path.dirname(_SCRIPT_DIR), "history")
+
+
+def _load_model_catalog():
+    fallback_id = "moonshotai.kimi-k2.5"
+    fallback = [{"id": fallback_id, "label": "Kimi K2.5"}]
+    try:
+        with open(MODELS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict) and "models" in data:
+            raw = data["models"]
+        elif isinstance(data, list):
+            raw = data
+        else:
+            return fallback, fallback_id
+        catalog = []
+        for m in raw:
+            if isinstance(m, str):
+                catalog.append({"id": m, "label": m})
+            elif isinstance(m, dict) and m.get("id"):
+                catalog.append({"id": m["id"], "label": m.get("label") or m["id"]})
+        if catalog:
+            return catalog, catalog[0]["id"]
+    except Exception:
+        pass
+    return fallback, fallback_id
+
+
 os.makedirs(HISTORY_DIR, exist_ok=True)
 
 # ---------------------------------------------------------------------------
@@ -40,7 +68,15 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 @app.get("/model")
 async def get_model():
-    return {"name": MODEL_ID}
+    catalog, default_id = _load_model_catalog()
+    label = next((m["label"] for m in catalog if m["id"] == default_id), default_id)
+    return {"name": label, "id": default_id}
+
+
+@app.get("/models")
+async def get_models():
+    catalog, default_id = _load_model_catalog()
+    return {"models": catalog, "default_id": default_id}
 
 # ---------------------------------------------------------------------------
 # Chat history endpoints
@@ -157,7 +193,7 @@ async def history_delete(request: Request):
 # ---------------------------------------------------------------------------
 # AWS Credentials endpoints
 # ---------------------------------------------------------------------------
-SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPTS_DIR = _SCRIPT_DIR
 CREDS_PATH = os.path.join(SCRIPTS_DIR, "aws_credentials.json")
 
 @app.get("/credentials/status")
@@ -215,6 +251,11 @@ async def chat(request: Request):
     body = await request.json()
     messages = body.get("messages", [])
     chat_id = body.get("chat_id", "")
+    catalog, default_id = _load_model_catalog()
+    allowed_ids = {m["id"] for m in catalog}
+    model_id = body.get("model_id") or default_id
+    if model_id not in allowed_ids:
+        model_id = default_id
 
     # Strip frontend display markers from messages before sending to model
     clean_messages = []
@@ -237,7 +278,9 @@ async def chat(request: Request):
         sock.connect("tcp://127.0.0.1:5557")
         try:
             # Send the conversation + chat_id to v-aws.py
-            await sock.send_json({"messages": clean_messages, "chat_id": chat_id})
+            await sock.send_json(
+                {"messages": clean_messages, "chat_id": chat_id, "model_id": model_id}
+            )
 
             # Continuously yield chunks to the frontend as v-aws sends them
             while True:

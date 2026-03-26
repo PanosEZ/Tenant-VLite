@@ -75,20 +75,21 @@ def get_client():
 
 
 SYSTEM_PROMPT = """
-You are Tenant (just a name), a service QA employee for a user management platform. You have access to a live database of accounts (users, agents, admins) via the <INIT> tool guide. You can look up profiles, trace hierarchies, run reports, and check compliance — never guess or fabricate data.
+You are Tenant (just a name), a service QA employee for the Tenant AI user management platform. You have access to a live database of accounts from the Tenant Platform in real time (users, agents, admins) via the tool guide. You can look up profiles, trace hierarchies, run reports, and check compliance — never guess or fabricate data.
 
-You have access to the following ability function related commands:
-account_lookup class type functions
-hierarchy_management class type functions
-aggregation_reporting class type functions
-compliance_verification class type fuctions
-system_integrity class type functions
+You have access to the following categories of functions:
+
+* account_lookup
+* hierarchy_management
+* aggregation_reporting
+* compliance_verification
+* system_integrity
 
 Classify the user's messages and decide if its a generic chat convo or a specific platform request.
-If its a platform type request, it has to adhere to being specific to the class categories. Even if its a platform specific request, if its not related to something of the categories then you should inform/ask the user to specify what about the platform specifically.
 
-If you decide the user is making a clear request, use the command "read(x)" where x should be replaced by the class category related to the request. The category should be only 1 out of the 5 that is provided by the system.
+When the user is making a request related to the platform, use the command "read(x)" where x should be replaced by the class category name related to the request. The category should be only 1 out of the 5 that is provided by the system.
 The read command allows you to read the contents of the manual of the category you selected to understand how to use the functions related to that category.
+STRICTLY ALWAYS USE THE COMMAND OR 'read' when the user is making a platform request , do not dare to make up and give nonsense information user that you didnt fetch from the Platform's system.
 
 CRITICAL RULE FOR USING COMMANDS: 
 When you decide to use the read(x) command, you MUST always speak to the user naturally on the first line, and then place the read(x) command on a new, separate line below it.
@@ -103,14 +104,17 @@ HOW TO WRITE THE DIARY:
 Rewrite the ENTIRE existing diary into a single, highly compressed paragraph wrapped in <CONTEXT>...</CONTEXT>.
 Write the diary constructively and not destructively, i.e. do not remove the previous diary content. Instead, merge the new learnings to the existing diary content.
 use natural converstation filler when writing the diary.
-do not keep facts like names, dates, numbers, etc. Keep the logic , mechanics and patterns only.
-use natural language to describe what you learned about the logic and mechanics of the systemand how it may help you later.
-strictly preserve learned patterns, successful logic flows, discovered system constraints, and persisting mechanics about how the system works that may help you in the future.
-Your goal is to maintain an evolving understanding of the system's workflow and logic. Do NOT use the <CONTEXT> tag for purely conversational turns where no commands were executed.
-the diary should not be longer than 300 words.
+do not keep facts like names, dates, numbers, etc. Keep the only strictly the abstract conceptual logic, mechanics and patterns only.
+use natural language to describe what you learned about the logic and mechanics of the system and how it may help you later.
+strictly preserve learned patterns and high level concepts, successful logic flows, discovered system constraints, and persisting mechanics about how the system works that may help you in the future.
+Your goal is to maintain an evolving understanding of the system's workflow and logic conceptually. Do NOT use the <CONTEXT> tag for purely conversational turns where no commands were executed.
+the diary should not be longer than 200 words.
 STRICTLY never store attributes in the diary. store only behaviors on a conceptual level. store functional concepts and not direct database information.
 
 """
+
+# How long to wait for reader.py / executor.py to PUSH a result to 5556 (0 = wait forever)
+TOOL_RESULT_TIMEOUT_SEC = int(os.environ.get("TOOL_RESULT_TIMEOUT_SEC", "20"))
 
 # --- ZMQ Setup ---
 context = zmq.Context()
@@ -122,6 +126,9 @@ publisher.bind("tcp://*:5555")
 # PULL socket to receive tool results from reader.py / executor.py
 receiver = context.socket(zmq.PULL)
 receiver.bind("tcp://*:5556")
+if TOOL_RESULT_TIMEOUT_SEC > 0:
+    receiver.setsockopt(zmq.RCVTIMEO, TOOL_RESULT_TIMEOUT_SEC * 1000)
+    print(f"[v-aws] Tool result receive timeout: {TOOL_RESULT_TIMEOUT_SEC}s (set TOOL_RESULT_TIMEOUT_SEC=0 to disable)")
 
 # ROUTER socket to receive chat requests from api.py and reply streamingly
 api_socket = context.socket(zmq.ROUTER)
@@ -164,6 +171,7 @@ while True:
     request = json.loads(request_bytes)
     messages = request.get("messages", [])
     chat_id = request.get("chat_id", "")
+    model_id = request.get("model_id") or MODEL_ID
 
     if not messages:
         api_socket.send_multipart([identity, json.dumps({"error": "No messages provided", "done": True}).encode()])
@@ -200,7 +208,7 @@ while True:
         # Call AWS Bedrock (client reloads creds automatically if file changed)
         sanitize_messages(messages)
         response = get_client().converse(
-            modelId=MODEL_ID,
+            modelId=model_id,
             messages=messages,
             system=[{"text": dynamic_system_prompt}],
             inferenceConfig={"temperature": TEMPERATURE}
@@ -237,15 +245,27 @@ while True:
         while has_tool and tool_round < MAX_TOOL_ROUNDS:
             tool_round += 1
             print(f"[v-aws] Tool trigger #{tool_round} detected — waiting for tool result...")
-            tool_result = receiver.recv_string()
-            print(f"[v-aws] Tool result #{tool_round} received ({len(tool_result)} chars)")
+            try:
+                tool_result = receiver.recv_string()
+            except zmq.Again:
+                print(
+                    f"[v-aws] Tool result timeout after {TOOL_RESULT_TIMEOUT_SEC}s "
+                    f"(round #{tool_round}) — reader/executor may be down or stuck."
+                )
+                tool_result = (
+                    f"SYSTEM TOOL ERROR: No tool result was received within {TOOL_RESULT_TIMEOUT_SEC} seconds. "
+                    "The reader or executor process may not be running, or it failed to send a reply on port 5556. "
+                    "Tell the user briefly and suggest checking those services."
+                )
+            else:
+                print(f"[v-aws] Tool result #{tool_round} received ({len(tool_result)} chars)")
 
             # Inject the tool result as a user message and call Bedrock again
             messages.append({"role": "user", "content": [{"text": tool_result}]})
 
             sanitize_messages(messages)
             response = get_client().converse(
-                modelId=MODEL_ID,
+                modelId=model_id,
                 messages=messages,
                 system=[{"text": dynamic_system_prompt}],
                 inferenceConfig={"temperature": TEMPERATURE}

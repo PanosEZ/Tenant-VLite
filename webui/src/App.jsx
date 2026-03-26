@@ -5,6 +5,199 @@ import lottie from 'lottie-web'
 import copyCheckAnim from './assets/copy-check.json'
 
 const GATEWAY_URL = '/api'
+const MODEL_STORAGE_KEY = 'tenant-bedrock-model-id'
+
+/** Shown immediately and if GET /models fails (e.g. API not running). Sync with scripts/models-list.json. */
+const DEFAULT_MODEL_CATALOG = [
+    { id: 'moonshotai.kimi-k2.5', label: 'Kimi K2.5' },
+    { id: 'qwen.qwen3-32b-v1:0', label: 'Qwen 3 32B' },
+]
+
+/** UI tier label next to each model in the picker (also applied after GET /models). */
+const MODEL_OPTION_TAGS = {
+    'moonshotai.kimi-k2.5': 'Pro',
+    'qwen.qwen3-32b-v1:0': 'Lite',
+}
+
+function attachModelOptionTags(m) {
+    const tag = m.tag ?? MODEL_OPTION_TAGS[m.id]
+    return tag ? { ...m, tag } : { ...m }
+}
+
+const MODEL_PRICE_BAR_CHUNKS = 8
+
+/** Visual pricing strip tier from option tag (Lite / Pro). */
+function pricingTierFromModel(m) {
+    const raw = String(m.tag ?? '').trim().toLowerCase()
+    if (raw === 'lite') return 'lite'
+    if (raw === 'pro') return 'pro'
+    return 'standard'
+}
+
+function readStoredModelId(allowedIds) {
+    try {
+        const s = localStorage.getItem(MODEL_STORAGE_KEY)
+        if (s && allowedIds.has(s)) return s
+    } catch { /* noop */ }
+    return null
+}
+
+function resolveModelId(models, selectedId) {
+    if (models.some((m) => m.id === selectedId)) return selectedId
+    return models[0]?.id ?? DEFAULT_MODEL_CATALOG[0].id
+}
+
+function ModelPicker({ models, value, onChange, disabled }) {
+    const [open, setOpen] = useState(false)
+    const rootRef = useRef(null)
+
+    useEffect(() => {
+        if (!open) return
+        const onDoc = (e) => {
+            if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false)
+        }
+        const onKey = (e) => {
+            if (e.key === 'Escape') setOpen(false)
+        }
+        document.addEventListener('mousedown', onDoc)
+        document.addEventListener('keydown', onKey)
+        return () => {
+            document.removeEventListener('mousedown', onDoc)
+            document.removeEventListener('keydown', onKey)
+        }
+    }, [open])
+
+    const safeModels = (models.length > 0 ? models : DEFAULT_MODEL_CATALOG).map(attachModelOptionTags)
+    const current = safeModels.find((m) => m.id === value) || safeModels[0]
+    const label = current?.label || current?.id || 'Model'
+
+    return (
+        <div className="model-picker" ref={rootRef}>
+            <button
+                type="button"
+                className={`model-picker-trigger ${open ? 'is-open' : ''}`}
+                disabled={disabled}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-label={`Model: ${label}. Open menu`}
+                onClick={() => !disabled && setOpen((o) => !o)}
+            >
+                <img
+                    src="/slash-icon.png"
+                    alt=""
+                    className="model-picker-trigger-icon"
+                    width={20}
+                    height={20}
+                    draggable={false}
+                />
+                <span className="model-picker-trigger-label">{label}</span>
+                <i className={`fa-solid fa-chevron-down model-picker-chevron ${open ? 'is-open' : ''}`} aria-hidden />
+            </button>
+            {open && (
+                <ul className="model-picker-menu" role="listbox">
+                    {safeModels.map((m) => (
+                        <li key={m.id} role="none">
+                            <button
+                                type="button"
+                                role="option"
+                                aria-selected={m.id === value}
+                                className={`model-picker-option ${m.id === value ? 'is-active' : ''}`}
+                                onClick={() => {
+                                    onChange(m.id)
+                                    try {
+                                        localStorage.setItem(MODEL_STORAGE_KEY, m.id)
+                                    } catch { /* noop */ }
+                                    setOpen(false)
+                                }}
+                            >
+                                <span className="model-picker-option-row">
+                                    <span className="model-picker-option-text">{m.label || m.id}</span>
+                                    {m.tag ? (
+                                        <span className="model-picker-option-tag">{m.tag}</span>
+                                    ) : null}
+                                </span>
+                                <div
+                                    className={`model-picker-price-bar model-picker-price-bar--${pricingTierFromModel(m)}`}
+                                    aria-hidden
+                                >
+                                    {Array.from({ length: MODEL_PRICE_BAR_CHUNKS }, (_, i) => (
+                                        <span key={i} className="model-picker-price-chunk" />
+                                    ))}
+                                </div>
+                                {m.id === value && (
+                                    <i className="fa-solid fa-check model-picker-check" aria-hidden />
+                                )}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    )
+}
+
+/** Deep clone Lottie JSON (structuredClone is missing in some browsers and would skip the feedback animation). */
+function cloneCopyCheckAnim() {
+    return JSON.parse(JSON.stringify(copyCheckAnim))
+}
+
+function playCopySuccessOnButton(btn) {
+    if (!btn) return
+    const icon = btn.querySelector('.copy-icon')
+    const animContainer = btn.querySelector('.copy-lottie')
+    if (!animContainer) return
+
+    const prev = btn._copyLottieInst
+    if (prev) {
+        try {
+            prev.destroy()
+        } catch (_) { /* noop */ }
+        btn._copyLottieInst = null
+    }
+
+    if (icon) icon.style.display = 'none'
+    animContainer.style.display = 'flex'
+    animContainer.innerHTML = ''
+
+    let anim = null
+    let finished = false
+    const restore = () => {
+        if (finished) return
+        finished = true
+        const inst = anim
+        if (btn._copyLottieInst === inst) btn._copyLottieInst = null
+        if (inst) {
+            try {
+                inst.destroy()
+            } catch (_) { /* noop */ }
+        }
+        anim = null
+        animContainer.innerHTML = ''
+        animContainer.style.display = 'none'
+        if (icon) icon.style.display = ''
+    }
+
+    const start = () => {
+        if (finished) return
+        try {
+            anim = lottie.loadAnimation({
+                container: animContainer,
+                renderer: 'svg',
+                loop: false,
+                autoplay: true,
+                animationData: cloneCopyCheckAnim(),
+            })
+            btn._copyLottieInst = anim
+            anim.addEventListener('complete', restore)
+        } catch (_) {
+            restore()
+            return
+        }
+        setTimeout(restore, 4000)
+    }
+
+    requestAnimationFrame(() => requestAnimationFrame(start))
+}
 
 // Map tool names to FontAwesome icons and readable labels
 function getToolAppearance(toolName) {
@@ -107,7 +300,11 @@ function App() {
     const [messages, setMessages] = useState([])
     const [input, setInput] = useState('')
     const [streaming, setStreaming] = useState(false)
-    const [modelName, setModelName] = useState('')
+    const [modelsList, setModelsList] = useState(() => [...DEFAULT_MODEL_CATALOG])
+    const [selectedModelId, setSelectedModelId] = useState(() => {
+        const allowed = new Set(DEFAULT_MODEL_CATALOG.map((m) => m.id))
+        return readStoredModelId(allowed) || DEFAULT_MODEL_CATALOG[0].id
+    })
     const [error, setError] = useState(null)
     const [editingIndex, setEditingIndex] = useState(null)
     const messagesEndRef = useRef(null)
@@ -123,6 +320,7 @@ function App() {
     const [renamingChatId, setRenamingChatId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
+    const [showSearch, setShowSearch] = useState(true)
     const [collapsedGroups, setCollapsedGroups] = useState(new Set())
     const [expandedGroups, setExpandedGroups] = useState(new Set())
     const [selectedDiaryChat, setSelectedDiaryChat] = useState(null)
@@ -247,17 +445,44 @@ function App() {
         }
     }, [])
 
-    // Fetch model info on mount
+    // Refresh catalog from API when available (keeps UI working offline / before gateway starts)
     useEffect(() => {
-        fetch(`${GATEWAY_URL}/model`)
-            .then(res => res.json())
-            .then(data => setModelName(data.name || data.id))
-            .catch(() => setModelName('Unknown'))
+        fetch(`${GATEWAY_URL}/models`)
+            .then((res) => {
+                if (!res.ok) throw new Error('models unavailable')
+                return res.json()
+            })
+            .then((data) => {
+                const list = Array.isArray(data.models)
+                    ? data.models.filter((m) => m && m.id)
+                    : []
+                if (list.length === 0) return
+                setModelsList(list.map(attachModelOptionTags))
+                const allowed = new Set(list.map((m) => m.id))
+                const stored = readStoredModelId(allowed)
+                if (stored) setSelectedModelId(stored)
+                else if (data.default_id && allowed.has(data.default_id))
+                    setSelectedModelId(data.default_id)
+                else setSelectedModelId(list[0].id)
+            })
+            .catch(() => { /* keep DEFAULT_MODEL_CATALOG */ })
 
         // Detect iOS
         const userAgent = window.navigator.userAgent.toLowerCase();
         setIsIOS(/iphone|ipad|ipod/.test(userAgent));
     }, [])
+
+    // Keep selection valid when catalog updates (e.g. after GET /models)
+    useEffect(() => {
+        if (modelsList.length === 0) return
+        if (!modelsList.some((m) => m.id === selectedModelId)) {
+            const next = modelsList[0].id
+            setSelectedModelId(next)
+            try {
+                localStorage.setItem(MODEL_STORAGE_KEY, next)
+            } catch { /* noop */ }
+        }
+    }, [modelsList, selectedModelId])
 
     // Auto-load chat from URL path on mount (e.g. /2kdi8ivQvQzXmg6y)
     useEffect(() => {
@@ -450,7 +675,11 @@ function App() {
             const res = await fetch(`${GATEWAY_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: payloadMessages, chat_id: currentChatId }),
+                body: JSON.stringify({
+                    messages: payloadMessages,
+                    chat_id: currentChatId,
+                    model_id: resolveModelId(modelsList, selectedModelId),
+                }),
                 signal: controller.signal,
             })
 
@@ -548,7 +777,7 @@ function App() {
             // Auto-save after response completes
             saveChat(currentChatId, finalMessages)
         }
-    }, [input, messages, streaming, editingIndex, chatId, saveChat])
+    }, [input, messages, streaming, editingIndex, chatId, saveChat, selectedModelId, modelsList])
 
     const stopGeneration = useCallback(() => {
         if (abortControllerRef.current) {
@@ -594,7 +823,11 @@ function App() {
             const res = await fetch(`${GATEWAY_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: payloadMessages, chat_id: currentChatId }),
+                body: JSON.stringify({
+                    messages: payloadMessages,
+                    chat_id: currentChatId,
+                    model_id: resolveModelId(modelsList, selectedModelId),
+                }),
                 signal: controller.signal,
             })
 
@@ -680,7 +913,7 @@ function App() {
 
             saveChat(currentChatId, finalMessages)
         }
-    }, [messages, streaming, chatId, saveChat])
+    }, [messages, streaming, chatId, saveChat, selectedModelId, modelsList])
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -874,50 +1107,78 @@ function App() {
             {showHistory && (
                 <div className={`history-overlay ${closingHistory ? 'closing' : ''}`} onClick={closeHistory}>
                     <div className={`history-modal ${closingHistory ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
-                        <div className="history-modal-header">
-                            <div className="history-modal-header-top">
-                                <span className="history-modal-title">
-                                    <i className="fa-regular fa-comments" style={{ marginRight: 8 }} />
-                                    CHAT HISTORY
-                                </span>
-                                <span className="history-count-badge">+{chatList.length}</span>
-                                <button
-                                    className="history-modal-close"
-                                    onClick={closeHistory}
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            <div className="history-search-container">
-                                <input
-                                    type="text"
-                                    className="history-search-input"
-                                    placeholder="Search history..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                <div className="history-search-actions">
-                                    <div className="history-search-icon">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <circle cx="11" cy="11" r="8"></circle>
-                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                        </svg>
+                        <div className="history-list">
+                            <div className={`history-modal-header-top${!showSearch ? ' history-modal-header-top--divider' : ''}`}>
+                                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                    <span className="history-modal-title">
+                                        <img
+                                            src="/history-chat-icon.png"
+                                            alt=""
+                                            className="history-modal-title-icon"
+                                        />
+                                        HISTORY
+                                    </span>
+                                    <span className="history-count-badge">+{chatList.length}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                                        <button
+                                            className="history-modal-close"
+                                            onClick={() => {
+                                                setShowSearch(!showSearch);
+                                                if (showSearch) setSearchQuery('');
+                                            }}
+                                            title="Toggle search"
+                                        >
+                                            <i className="fa-solid fa-magnifying-glass" style={{ fontSize: '14px' }} aria-hidden />
+                                        </button>
+                                        <button
+                                            className="history-modal-close"
+                                            onClick={closeHistory}
+                                        >
+                                            ✕
+                                        </button>
                                     </div>
-                                    <div className="history-search-divider" />
-                                    <button
-                                        className={`history-search-clear ${searchQuery ? 'active' : ''}`}
-                                        title="Clear search"
-                                        onClick={() => setSearchQuery('')}
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                                            <line x1="2" y1="2" x2="22" y2="22"></line>
-                                        </svg>
-                                    </button>
+                                </div>
+                                <div
+                                    className={`history-modal-header-shell${showSearch ? ' history-modal-header-shell--open' : ''}`}
+                                    aria-hidden={!showSearch}
+                                >
+                                    <div className="history-modal-header-shell-inner">
+                                        <div className="history-modal-header">
+                                            <div className="history-search-container">
+                                                <input
+                                                    type="text"
+                                                    className="history-search-input"
+                                                    placeholder="Search history..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    tabIndex={showSearch ? 0 : -1}
+                                                />
+                                                <div className="history-search-actions">
+                                                    <div className="history-search-icon">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="11" cy="11" r="8"></circle>
+                                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                                        </svg>
+                                                    </div>
+                                                    <div className="history-search-divider" />
+                                                    <button
+                                                        type="button"
+                                                        className={`history-search-clear ${searchQuery ? 'active' : ''}`}
+                                                        title="Clear search"
+                                                        onClick={() => setSearchQuery('')}
+                                                        tabIndex={showSearch ? 0 : -1}
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                                                            <line x1="2" y1="2" x2="22" y2="22"></line>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="history-list">
                             {(() => {
                                 const filteredChats = chatList.filter(chat =>
                                     (chat.title || chat.preview || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -997,7 +1258,7 @@ function App() {
                                             <span>{group.date}</span>
                                             <i 
                                                 className={`fa-solid fa-chevron-down history-date-chevron ${isCollapsed ? 'collapsed' : ''}`} 
-                                                style={{ marginLeft: 'auto', fontSize: '10px', transition: 'transform 0.2s' }}
+                                                style={{ marginLeft: 'auto', fontSize: '12px', transition: 'transform 0.2s', marginRight: '11px' }}
                                             />
                                         </div>
                                         <div className={`history-date-collapsible ${isCollapsed ? 'collapsed' : ''}`}>
@@ -1132,7 +1393,7 @@ function App() {
                 <div className="header">
                     <div className="header-left">
                         <img src="/tenant-pixel.png" alt="Tenant" className="header-logo" />
-                        <span className="header-title">TENANT · CHAT</span>
+                        <span className="header-title">TENANT</span>
                         <button
                             className="new-chat-btn"
                             onClick={startNewChat}
@@ -1142,6 +1403,12 @@ function App() {
                         </button>
                     </div>
                     <div className="header-right">
+                        <ModelPicker
+                            models={modelsList}
+                            value={selectedModelId}
+                            disabled={streaming}
+                            onChange={setSelectedModelId}
+                        />
                         {chatId && (
                             <button
                                 className="header-action-btn"
@@ -1200,9 +1467,9 @@ function App() {
 
                                 <div className="suggestion-questions">
                                     {[
-                                        { text: "Can you please tell me what email address is registered to user3?", icon: "fa-regular fa-envelope" },
-                                        { text: "Are there any agents who haven't verified their email addresses yet?", icon: "fa-regular fa-user" },
-                                        { text: "What's the ratio of AGENT accounts to regular USER accounts?", icon: "fa-solid fa-chart-pie" }
+                                        { text: "Find the exact admin of this platform and give me his full information.", icon: "fa-regular fa-envelope" },
+                                        { text: "Give me a table with 5 random agents who use USD as their currency", icon: "fa-regular fa-user" },
+                                        { text: "What's the ratio between the currencies that users use in the app?", icon: "fa-solid fa-chart-pie" }
                                     ].map((q, idx) => (
                                         <button
                                             key={idx}
@@ -1259,26 +1526,7 @@ function App() {
                                                             title="Copy"
                                                                 onClick={(e) => {
                                                                     navigator.clipboard.writeText(msg.content[0].text)
-                                                                    const btn = e.currentTarget
-                                                                    const icon = btn.querySelector('.copy-icon')
-                                                                    const animContainer = btn.querySelector('.copy-lottie')
-                                                                    if (icon) icon.style.display = 'none'
-                                                                    if (animContainer) {
-                                                                        animContainer.style.display = 'flex'
-                                                                        animContainer.innerHTML = ''
-                                                                        const anim = lottie.loadAnimation({
-                                                                            container: animContainer,
-                                                                            renderer: 'svg',
-                                                                            loop: false,
-                                                                            autoplay: true,
-                                                                            animationData: structuredClone(copyCheckAnim)
-                                                                        })
-                                                                        anim.addEventListener('complete', () => {
-                                                                            anim.destroy()
-                                                                            animContainer.style.display = 'none'
-                                                                            if (icon) icon.style.display = ''
-                                                                        })
-                                                                    }
+                                                                    playCopySuccessOnButton(e.currentTarget)
                                                                 }}
                                                             >
                                                                 <i className="fa-regular fa-copy copy-icon" />
@@ -1325,7 +1573,7 @@ function App() {
                                             <div className="message-content">
                                                 <div className="message-header">
                                                     <span className="message-sender">Model</span>
-                                                    <span className="message-dot">•</span>
+                                                    <span className="message-dot"> ~</span>
                                                     <span className="message-time">
                                                         {firstMsg.timestamp ? new Date(firstMsg.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '7:34 PM'}
                                                     </span>
@@ -1395,26 +1643,7 @@ function App() {
                                                         onClick={(e) => {
                                                                 const allText = group.msgs.map(({ msg }) => msg.content[0].text).join('\n\n')
                                                                 navigator.clipboard.writeText(allText)
-                                                                const btn = e.currentTarget
-                                                                const icon = btn.querySelector('.copy-icon')
-                                                                const animContainer = btn.querySelector('.copy-lottie')
-                                                                if (icon) icon.style.display = 'none'
-                                                                if (animContainer) {
-                                                                    animContainer.style.display = 'flex'
-                                                                    animContainer.innerHTML = ''
-                                                                    const anim = lottie.loadAnimation({
-                                                                        container: animContainer,
-                                                                        renderer: 'svg',
-                                                                        loop: false,
-                                                                        autoplay: true,
-                                                                        animationData: structuredClone(copyCheckAnim)
-                                                                    })
-                                                                    anim.addEventListener('complete', () => {
-                                                                        anim.destroy()
-                                                                        animContainer.style.display = 'none'
-                                                                        if (icon) icon.style.display = ''
-                                                                    })
-                                                                }
+                                                                playCopySuccessOnButton(e.currentTarget)
                                                             }}
                                                         >
                                                             <i className="fa-regular fa-copy copy-icon" />
