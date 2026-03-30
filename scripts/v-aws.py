@@ -14,6 +14,30 @@ if sys.platform == "win32":
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
+READER_REP_PORT = 5558
+EXECUTOR_REP_PORT = 5559
+
+
+def merge_tool_results(read_result, exec_result):
+    """Same join order as before: read first, then function execution."""
+    parts = []
+    if read_result:
+        parts.append(read_result)
+    if exec_result:
+        parts.append(exec_result)
+    if not parts:
+        return None
+    if len(parts) == 1:
+        return parts[0]
+    return (
+        "\n\n--- NEXT TOOL RESULT (same turn; read first, then execution) ---\n\n".join(
+            parts
+        )
+    )
+
 creds_path = os.path.join(script_dir, 'aws_credentials.json')
 
 REGION = "us-east-1"
@@ -90,6 +114,7 @@ Classify the user's messages and decide if its a generic chat convo or a specifi
 When the user is making a request related to the platform, use the command "read(x)" where x should be replaced by the class category name related to the request. The category should be only 1 out of the 5 that is provided by the system.
 The read command allows you to read the contents of the manual of the category you selected to understand how to use the functions related to that category.
 STRICTLY ALWAYS USE THE COMMAND OR 'read' when the user is making a platform request , do not dare to make up and give nonsense information user that you didnt fetch from the Platform's system.
+important: striclty avoid repeated read(x) commands unless absolutely necessary. strictly follow the chain of read-function-read-funtion and so on. you are only allowed to use the pattern like read-read ... only if the first read provided info that is not relevant with your case.
 
 CRITICAL RULE FOR USING COMMANDS: 
 When you decide to use the read(x) command, you MUST always speak to the user naturally on the first line, and then place the read(x) command on a new, separate line below it.
@@ -113,22 +138,53 @@ STRICTLY never store attributes in the diary. store only behaviors on a conceptu
 
 """
 
-# How long to wait for reader.py / executor.py to PUSH a result to 5556 (0 = wait forever)
-TOOL_RESULT_TIMEOUT_SEC = int(os.environ.get("TOOL_RESULT_TIMEOUT_SEC", "20"))
-
 # --- ZMQ Setup ---
 context = zmq.Context()
 
-# PUB socket for reader.py and executor.py to observe
+# PUB socket for context.py (<CONTEXT> diary extraction)
 publisher = context.socket(zmq.PUB)
 publisher.bind("tcp://*:5555")
 
-# PULL socket to receive tool results from reader.py / executor.py
-receiver = context.socket(zmq.PULL)
-receiver.bind("tcp://*:5556")
-if TOOL_RESULT_TIMEOUT_SEC > 0:
-    receiver.setsockopt(zmq.RCVTIMEO, TOOL_RESULT_TIMEOUT_SEC * 1000)
-    print(f"[v-aws] Tool result receive timeout: {TOOL_RESULT_TIMEOUT_SEC}s (set TOOL_RESULT_TIMEOUT_SEC=0 to disable)")
+# Tool execution: reader.py (REP on READER_REP_PORT) + executor.py (REP on EXECUTOR_REP_PORT).
+# v-aws only merges RPC results — no subprocess/manual reads here.
+
+TOOL_RPC_TIMEOUT_MS = 300_000  # 5 min per worker (long DB queries)
+
+
+def fetch_tool_results_from_workers(bot_reply: str):
+    """Ask reader then executor workers; merge in the same order as tools_inline."""
+    payload = json.dumps({"bot_reply": bot_reply})
+
+    def one_rpc(port: int):
+        s = context.socket(zmq.REQ)
+        s.setsockopt(zmq.LINGER, 0)
+        s.setsockopt(zmq.RCVTIMEO, TOOL_RPC_TIMEOUT_MS)
+        s.connect(f"tcp://127.0.0.1:{port}")
+        try:
+            s.send_string(payload)
+            return json.loads(s.recv_string())
+        except zmq.Again:
+            return {"result": None, "error": "RPC timeout (worker not running or hung)"}
+        finally:
+            s.close()
+
+    r_ack = one_rpc(READER_REP_PORT)
+    e_ack = one_rpc(EXECUTOR_REP_PORT)
+
+    read_part = None
+    if r_ack.get("error"):
+        read_part = f"SYSTEM TOOL ERROR (reader): {r_ack['error']}"
+    else:
+        read_part = r_ack.get("result")
+
+    exec_part = None
+    if e_ack.get("error"):
+        exec_part = f"SYSTEM TOOL ERROR (executor): {e_ack['error']}"
+    else:
+        exec_part = e_ack.get("result")
+
+    return merge_tool_results(read_part, exec_part)
+
 
 # ROUTER socket to receive chat requests from api.py and reply streamingly
 api_socket = context.socket(zmq.ROUTER)
@@ -143,21 +199,17 @@ def sanitize_messages(messages):
                     block["text"] = "(continued)"
 
 def truncate_at_tool(text):
-    """When the model triggers a tool command, strip any hallucinated content
-    it generated after the command. Returns text up to and including the tool line."""
-    # Find the end position of a read(x) line
-    read_match = re.search(r'^.*read\([^)]+\).*$', text, re.MULTILINE)
-    read_end = read_match.end() if read_match else None
+    """Strip hallucinated content after the last tool command in this message."""
+    read_matches = list(re.finditer(r"^.*read\([^)]+\).*$", text, re.MULTILINE))
+    read_end = read_matches[-1].end() if read_matches else None
 
-    # Find the end position of a </FUNCTION_CALL> block
-    func_match = re.search(r'</FUNCTION_CALL>', text)
+    func_match = re.search(r"</FUNCTION_CALL>", text)
     func_end = func_match.end() if func_match else None
 
-    # Pick whichever tool command appears first
     candidates = [pos for pos in (read_end, func_end) if pos is not None]
     if not candidates:
         return text
-    cut_pos = min(candidates)
+    cut_pos = max(candidates)
     return text[:cut_pos]
 
 print("[v-aws] Brain online. Listening for API requests on port 5557...")
@@ -237,28 +289,22 @@ while True:
         # Add the truncated reply to conversation history so the model doesn't see its own hallucinations
         messages.append({"role": "assistant", "content": [{"text": display_text}]})
 
-        # Publish to PUB so reader/executor/context can see the tool commands
+        # Publish for context.py (<CONTEXT> diary extraction).
         publisher.send_string(json.dumps({"chat_id": chat_id, "text": bot_reply}))
 
         # Tool loop — keeps going as long as the LLM triggers a tool
         tool_round = 0
         while has_tool and tool_round < MAX_TOOL_ROUNDS:
             tool_round += 1
-            print(f"[v-aws] Tool trigger #{tool_round} detected — waiting for tool result...")
-            try:
-                tool_result = receiver.recv_string()
-            except zmq.Again:
-                print(
-                    f"[v-aws] Tool result timeout after {TOOL_RESULT_TIMEOUT_SEC}s "
-                    f"(round #{tool_round}) — reader/executor may be down or stuck."
-                )
+            print(f"[v-aws] Tool trigger #{tool_round} — RPC reader + executor...")
+            tool_result = fetch_tool_results_from_workers(bot_reply)
+            if tool_result is None:
                 tool_result = (
-                    f"SYSTEM TOOL ERROR: No tool result was received within {TOOL_RESULT_TIMEOUT_SEC} seconds. "
-                    "The reader or executor process may not be running, or it failed to send a reply on port 5556. "
-                    "Tell the user briefly and suggest checking those services."
+                    "SYSTEM TOOL ERROR: Model output indicated a tool but no valid read(x) or "
+                    "<FUNCTION_CALL>...</FUNCTION_CALL> could be executed."
                 )
             else:
-                print(f"[v-aws] Tool result #{tool_round} received ({len(tool_result)} chars)")
+                print(f"[v-aws] Tool result #{tool_round} ({len(tool_result)} chars)")
 
             # Inject the tool result as a user message and call Bedrock again
             messages.append({"role": "user", "content": [{"text": tool_result}]})
@@ -303,7 +349,6 @@ while True:
                     messages[-2]["content"][0]["text"] = f"[Delivered — {summary}]"
                     print(f"[v-aws] Compressed consumed tool result: {summary}")
 
-            # Publish full text so reader/executor can detect tool commands
             publisher.send_string(json.dumps({"chat_id": chat_id, "text": bot_reply}))
 
         done_payload = {"done": True, "total_tokens": total_tokens}

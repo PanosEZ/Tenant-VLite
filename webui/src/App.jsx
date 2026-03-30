@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import lottie from 'lottie-web'
@@ -200,6 +200,132 @@ function playCopySuccessOnButton(btn) {
 }
 
 // Map tool names to FontAwesome icons and readable labels
+const TOOL_MARKER_SPLIT_RE = /(\{\{(?:TOOL|READ):[^}]+\}\})/g
+
+function stripAssistantMarkupNoise(t) {
+    let s = t
+    s = s.replace(/<FUNCTION_CALL>[\s\S]*?<\/FUNCTION_CALL>/g, '')
+    s = s.replace(/<CONTEXT>[\s\S]*?<\/CONTEXT>/g, '')
+    s = s.replace(/^read\([^)]*\)\s*$/gm, '')
+    return s
+}
+
+/** Full text before each completed marker + marker → archived; remainder is the visible tail. */
+function segmentToolMarkerChain(cleanedText) {
+    const parts = cleanedText.split(TOOL_MARKER_SPLIT_RE)
+    const archived = []
+    let i = 0
+    while (i + 1 < parts.length) {
+        const marker = parts[i + 1]
+        if (/^\{\{(TOOL|READ):.+\}\}$/.test(marker)) {
+            archived.push({ text: parts[i], marker })
+            i += 2
+        } else {
+            break
+        }
+    }
+    const tail = parts.slice(i).join('')
+    return { archived, tail }
+}
+
+function ToolExecutionBadge({ marker }) {
+    const toolMatch = marker.match(/^\{\{(TOOL|READ):(.+)\}\}$/)
+    if (!toolMatch) return null
+    const markerType = toolMatch[1]
+    const toolName = toolMatch[2]
+    const appearance = getToolAppearance(toolName)
+    const verb = markerType === 'READ' ? 'Read' : 'Executed'
+    const icon = markerType === 'READ' ? 'fa-solid fa-book-open' : appearance.icon
+    return (
+        <div className="tool-execution-badge">
+            <i className={icon} style={markerType === 'READ' ? { fontSize: '1.15em' } : undefined} />
+            <span>
+                {verb} <strong>{appearance.label}</strong>
+            </span>
+        </div>
+    )
+}
+
+/** One expandable + one tail for the whole assistant chain (all steps’ text joined). */
+function AssistantGroupToolChainMarkdown({ groupMsgs, animateTail }) {
+    const combined = groupMsgs.map(({ msg }) => stripAssistantMarkupNoise(msg.content[0].text)).join('\n\n')
+    const { archived, tail } = segmentToolMarkerChain(combined)
+    const tailTrimmed = tail.trim()
+    const n = archived.length
+    const summaryLabel =
+        n === 1 ? '1 earlier step' : `${n} earlier steps`
+
+    const [chainExpanded, setChainExpanded] = useState(false)
+    const [panelHeight, setPanelHeight] = useState(0)
+    const chainBodyRef = useRef(null)
+
+    useLayoutEffect(() => {
+        if (!chainExpanded) {
+            setPanelHeight(0)
+            return
+        }
+        const el = chainBodyRef.current
+        if (!el) return
+        /* scrollHeight can sit slightly under the full border box; ceil + 1px avoids clipping the bottom border. */
+        const apply = () =>
+            setPanelHeight(Math.ceil(el.getBoundingClientRect().height) + 1)
+        const id = requestAnimationFrame(apply)
+        return () => cancelAnimationFrame(id)
+    }, [chainExpanded, combined])
+
+    const onChainToggle = () => {
+        setChainExpanded((open) => !open)
+    }
+
+    return (
+        <>
+            {n > 0 && (
+                <div
+                    className={`tool-chain-history${chainExpanded ? ' tool-chain-history--open' : ''}`}
+                >
+                    <button
+                        type="button"
+                        className="tool-chain-history-trigger"
+                        aria-expanded={chainExpanded}
+                        onClick={onChainToggle}
+                    >
+                        <span className="tool-chain-summary-label">
+                            <i className="fa-solid fa-layer-group" aria-hidden />
+                            <span>{chainExpanded ? 'Hide previous actions' : `Show ${summaryLabel}`}</span>
+                        </span>
+                        <i className="fa-solid fa-chevron-right tool-chain-history-chevron" style={{ marginLeft: '6px', fontSize: '13px' }} aria-hidden />
+                    </button>
+                    <div
+                        className={`tool-chain-history-body-shell${panelHeight === 0 ? ' tool-chain-history-body-shell--collapsed' : ''}`}
+                        style={{ height: panelHeight }}
+                    >
+                        <div ref={chainBodyRef} className="tool-chain-history-body">
+                            {archived.map((seg, si) => (
+                                <div key={si} className="tool-chain-history-segment">
+                                    {seg.text.trim() ? (
+                                        <div className="tool-chain-history-md">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text.trim()}</ReactMarkdown>
+                                        </div>
+                                    ) : null}
+                                    <ToolExecutionBadge marker={seg.marker} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div
+                className={`message-active-tail${animateTail ? ' message-active-tail--enter' : ''}`}
+                key={n}
+            >
+                {tailTrimmed ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{tailTrimmed}</ReactMarkdown>
+                ) : null}
+            </div>
+        </>
+    )
+}
+
 function getToolAppearance(toolName) {
     const lower = (toolName || '').toLowerCase()
 
@@ -1581,10 +1707,12 @@ function App() {
                                                         <span className="token-badge"><i className="fa-regular fa-comments" />+{chainTokens.toLocaleString()}</span>
                                                     )}
                                                 </div>
-                                                {group.msgs.map(({ msg, idx }) => (
-                                                    <div key={idx} className="chain-step">
-                                                        {msg.thinking && (
-                                                            <details className={`thinking-block ${streaming && idx === messages.length - 1 ? 'streaming' : ''}`}>
+                                                {group.msgs.map(({ msg, idx }) =>
+                                                    msg.thinking ? (
+                                                        <div key={idx} className="chain-step">
+                                                            <details
+                                                                className={`thinking-block ${streaming && idx === messages.length - 1 ? 'streaming' : ''}`}
+                                                            >
                                                                 <summary>
                                                                     <i className="fa-solid fa-brain" />
                                                                     <span>Thinking</span>
@@ -1594,48 +1722,20 @@ function App() {
                                                                 </summary>
                                                                 <div className="thinking-content">{msg.thinking}</div>
                                                             </details>
-                                                        )}
-                                                        <div className={`message-body ${streaming && idx === messages.length - 1 ? 'streaming' : ''}`}>
-                                                            <div className="markdown-content">
-                                                                {(() => {
-                                                                    let t = msg.content[0].text
-                                                                    t = t.replace(/<FUNCTION_CALL>[\s\S]*?<\/FUNCTION_CALL>/g, '')
-                                                                    t = t.replace(/<CONTEXT>[\s\S]*?<\/CONTEXT>/g, '')
-                                                                    t = t.replace(/^read\([^)]*\)\s*$/gm, '')
-
-                                                                    const parts = t.split(/(\{\{(?:TOOL|READ):[^}]+\}\})/g)
-
-                                                                    return parts.map((part, pidx) => {
-                                                                        const toolMatch = part.match(/^\{\{(TOOL|READ):(.+)\}\}$/)
-                                                                        if (toolMatch) {
-                                                                            const markerType = toolMatch[1]
-                                                                            const toolName = toolMatch[2]
-                                                                            const appearance = getToolAppearance(toolName)
-                                                                            const verb = markerType === 'READ' ? 'Read' : 'Executed'
-                                                                            const icon = markerType === 'READ' ? 'fa-solid fa-book-open' : appearance.icon
-                                                                            return (
-                                                                                <div key={pidx} className="tool-execution-badge">
-                                                                                    <i className={icon} style={markerType === 'READ' ? { fontSize: '1.15em' } : undefined}></i>
-                                                                                    <span>{verb} <strong>{appearance.label}</strong></span>
-                                                                                </div>
-                                                                            )
-                                                                        }
-                                                                        const trimmed = part.trim()
-                                                                        if (!trimmed) return null
-                                                                        return (
-                                                                            <ReactMarkdown key={pidx} remarkPlugins={[remarkGfm]}>
-                                                                                {trimmed}
-                                                                            </ReactMarkdown>
-                                                                        )
-                                                                    })
-                                                                })()}
-                                                            </div>
-                                                            {streaming && idx === messages.length - 1 && !msg.processing && (
-                                                                <span className="cursor" />
-                                                            )}
                                                         </div>
+                                                    ) : null
+                                                )}
+                                                <div
+                                                    className={`chain-step message-body ${isLastStreaming ? 'streaming' : ''}`}
+                                                >
+                                                    <div className="markdown-content">
+                                                        <AssistantGroupToolChainMarkdown
+                                                            groupMsgs={group.msgs}
+                                                            animateTail={isLastStreaming}
+                                                        />
                                                     </div>
-                                                ))}
+                                                    {isLastStreaming && !lastMsg.processing && <span className="cursor" />}
+                                                </div>
                                                 <div className="message-actions" style={{ visibility: isLastStreaming ? 'hidden' : 'visible' }}>
                                                     <button
                                                         className="action-btn copy-action-btn"

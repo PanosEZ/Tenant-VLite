@@ -1,5 +1,5 @@
 # Tool: Account Lookup
-**Function Name:** `lookup_account`
+**Function Name:** `account_lookup`
 
 ## Scope
 Handles all single-entity and flat-filtered queries. This function is for direct retrieval of user profiles based on specific identifiers or categorical fields. It does not perform any tree-based or hierarchical reasoning.
@@ -35,7 +35,7 @@ You are strictly allowed to write ONLY ONE function call. The dev tool cannot ex
 
 Example:
 <FUNCTION_CALL>
-{"function": "lookup_account", "arguments": {"type": "AGENT", "return_fields": ["username", "id"], "limit": 10}}
+{"function": "account_lookup", "arguments": {"type": "AGENT", "return_fields": ["username", "id"], "limit": 10}}
 </FUNCTION_CALL>
 
 You are free to include any text with your thoughts and reasoning before writing the final <FUNCTION_CALL> block. Do NOT fabricate results.

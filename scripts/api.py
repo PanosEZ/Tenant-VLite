@@ -319,8 +319,9 @@ async def chat(request: Request):
                     # Attempt to extract the specific tool name
                     extracted_tool = "function"  # default fallback
                     
-                    # Check for read(x)
-                    read_match = re.search(r'read\(([^)]+)\)', raw_text)
+                    # Last read(x) matches reader worker (prose may mention another read first)
+                    read_matches = list(re.finditer(r"read\(([^)]+)\)", raw_text))
+                    read_match = read_matches[-1] if read_matches else None
                     if read_match:
                         extracted_tool = read_match.group(1).strip()
                     else:

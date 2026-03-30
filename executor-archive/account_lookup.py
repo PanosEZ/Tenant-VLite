@@ -10,7 +10,7 @@ def load_db():
     with open(DB_FILE, 'r') as f:
         return json.load(f)
 
-def lookup_account(args):
+def account_lookup(args):
     db = load_db()
     results = []
 
@@ -69,7 +69,7 @@ def lookup_account(args):
 if __name__ == "__main__":
     try:
         args = json.loads(sys.argv[1]) if len(sys.argv) > 1 else {}
-        result = lookup_account(args)
+        result = account_lookup(args)
         print(json.dumps(result, indent=2))
     except Exception as e:
         print(json.dumps({"status": "error", "message": str(e)}))

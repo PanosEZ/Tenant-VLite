@@ -1553,13 +1553,156 @@ body {
     }
 }
 
+/* ─── Tool chain: collapsed history + active tail ─── */
+.tool-chain-history {
+    margin: 0 0 0px;
+    margin-left: -12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    overflow: visible;
+    animation: tool-chain-history-in 0.32s ease-out;
+}
+
+@keyframes tool-chain-history-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.tool-chain-history-trigger {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 16px;
+    color: var(--text-dim);
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s, background 0.2s;
+    margin-top: -10px;
+}
+
+.tool-chain-summary-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.tool-chain-summary-label > .fa-layer-group {
+    font-size: 14px;
+    opacity: 0.85;
+    flex-shrink: 0;
+}
+
+.tool-chain-history-chevron {
+    flex-shrink: 0;
+    font-size: 11px;
+    opacity: 0.72;
+    transition: transform 0.2s ease, opacity 0.2s;
+}
+
+.tool-chain-history--open .tool-chain-history-chevron {
+    transform: rotate(90deg);
+}
+
+.tool-chain-history-trigger:hover {
+    color: var(--text-secondary);
+}
+
+.tool-chain-history-trigger:hover .tool-chain-history-chevron {
+    opacity: 0.95;
+}
+
+/* Height from JS; margin-bottom matches expanded shell so it eases with height, not chainOpen. */
+.tool-chain-history-body-shell {
+    overflow: hidden;
+    margin-bottom: 0;
+    transition:
+        height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+        margin-bottom 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tool-chain-history-body-shell:not(.tool-chain-history-body-shell--collapsed) {
+    margin-bottom: 12px;
+}
+
+.tool-chain-history-body {
+    min-height: 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tool-chain-history-body-shell--collapsed .tool-chain-history-body {
+    pointer-events: none;
+}
+
+.tool-chain-history-body::-webkit-scrollbar {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tool-chain-history-body-shell {
+        transition: none;
+    }
+}
+
+.tool-chain-history-segment + .tool-chain-history-segment {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+}
+
+.tool-chain-history-md {
+    min-width: 0;
+}
+
+.message-active-tail {
+    min-width: 0;
+}
+
+.message-active-tail--enter {
+    animation: message-active-tail-enter 0.3s ease-out;
+}
+
+@keyframes message-active-tail-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 /* ─── Tool Execution Badge ──────────────────────── */
 .tool-execution-badge {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     padding: 0px 0;
-    margin-bottom: 12px;
+    margin-bottom: 0px;
     margin-top: 4px;
     font-size: 1rem;
     color: rgb(115, 115, 115) !important;
@@ -2060,8 +2203,8 @@ body {
 
 .markdown-content hr {
     border: none;
-    border-top: 1px solid var(--border);
-    margin: 10px 0;
+    border-top: 0px solid var(--border);
+    margin: -4px 0px;
 }
 
 .markdown-content strong {
