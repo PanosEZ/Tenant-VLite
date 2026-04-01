@@ -2671,6 +2671,32 @@ body {
     background: rgba(127, 29, 29, 0.28);
 }
 
+.settings-validating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #a3a3a3;
+    margin: -4px 0 18px 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(207, 133, 44, 0.08);
+    border: 1px solid rgba(207, 133, 44, 0.2);
+    animation: fadeIn 0.25s ease;
+}
+
+.settings-validating-spinner {
+    flex-shrink: 0;
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(207, 133, 44, 0.25);
+    border-top-color: #cf852c;
+    border-radius: 50%;
+    animation: thinking-spin 0.6s linear infinite;
+}
+
 .settings-fields {
     display: flex;
     flex-direction: column;
@@ -2741,6 +2767,11 @@ body {
 .settings-input:focus {
     border-color: #a17831;
     background: #0c0c0c;
+}
+
+.settings-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 /*

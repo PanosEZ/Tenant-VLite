@@ -1223,6 +1223,12 @@ function App() {
                             {keysError && (
                                 <div className="settings-toast error" role="alert">{keysError}</div>
                             )}
+                            {savingKeys && (
+                                <div className="settings-validating" role="status" aria-live="polite">
+                                    <span className="settings-validating-spinner" aria-hidden />
+                                    Validating your AWS credentials…
+                                </div>
+                            )}
 
                             <div className="settings-fields">
                                 <div className="settings-field">
@@ -1238,6 +1244,7 @@ function App() {
                                             onChange={e => setAwsAccessKey(e.target.value)}
                                             spellCheck={false}
                                             autoComplete="off"
+                                            disabled={savingKeys}
                                         />
                                     </div>
                                 </div>
@@ -1254,6 +1261,7 @@ function App() {
                                             onChange={e => setAwsSecretKey(e.target.value)}
                                             spellCheck={false}
                                             autoComplete="off"
+                                            disabled={savingKeys}
                                         />
                                     </div>
                                 </div>
@@ -1273,7 +1281,7 @@ function App() {
                                 disabled={savingKeys || (!awsAccessKey.trim() && !awsSecretKey.trim())}
                             >
                                 {savingKeys ? (
-                                    <><span className="settings-save-spinner" />Saving…</>
+                                    <><span className="settings-save-spinner" />Validating…</>
                                 ) : (
                                     <>
                                         Save credentials

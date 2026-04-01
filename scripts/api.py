@@ -3,6 +3,10 @@ import json
 import time
 import asyncio
 import sys
+from typing import Optional, Tuple
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import zmq
@@ -209,6 +213,33 @@ async def credentials_status():
         return JSONResponse({"configured": False})
 
 
+def _validate_aws_keys_sync(access_key: str, secret_key: str) -> Tuple[bool, Optional[str]]:
+    """Return (True, None) if keys authenticate with AWS STS; else (False, user_message)."""
+    try:
+        sts = boto3.client(
+            "sts",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+        sts.get_caller_identity()
+        return True, None
+    except ClientError as e:
+        code = (e.response.get("Error") or {}).get("Code", "")
+        if code in (
+            "InvalidClientTokenId",
+            "SignatureDoesNotMatch",
+            "UnrecognizedClientException",
+        ):
+            return False, "Those credentials are not valid. Double-check your access key ID and secret access key."
+        if code == "ExpiredToken":
+            return False, "These credentials have expired."
+        return False, "AWS rejected these credentials. Verify the keys and try again."
+    except BotoCoreError:
+        return False, "Could not reach AWS. Check your network connection and try again."
+    except Exception:
+        return False, "Could not validate credentials. Try again in a moment."
+
+
 @app.post("/credentials/save")
 async def credentials_save(request: Request):
     body = await request.json()
@@ -217,6 +248,10 @@ async def credentials_save(request: Request):
 
     if not access_key or not secret_key:
         return JSONResponse({"error": "Both keys are required"}, status_code=400)
+
+    ok, err = await asyncio.to_thread(_validate_aws_keys_sync, access_key, secret_key)
+    if not ok:
+        return JSONResponse({"error": err or "Invalid credentials."}, status_code=401)
 
     creds = {
         "AWS_ACCESS_KEY_ID": access_key,
