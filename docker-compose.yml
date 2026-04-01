@@ -1,0 +1,24 @@
+services:
+  tenant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      API_HOST: "0.0.0.0"
+      API_PORT: "5000"
+    expose:
+      - "5000"
+    # Optional: supply Bedrock credentials from the host (create scripts/aws_credentials.json first)
+    # volumes:
+    #   - ./scripts/aws_credentials.json:/app/scripts/aws_credentials.json:ro
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "8080:80"
+    depends_on:
+      - tenant
+    restart: unless-stopped

@@ -1,0 +1,15 @@
+.git
+.gitignore
+**/__pycache__
+**/*.pyc
+**/*.pyo
+venv
+env
+.env
+.vscode
+.idea
+node_modules
+webui/node_modules
+webui/dist
+.tenant_vlite_setup_complete
+scripts/aws_credentials.json

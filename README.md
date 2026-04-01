@@ -62,6 +62,26 @@ The application will be available at:
 - Frontend: http://localhost:3000
 - API: http://localhost:5000
 
+### Docker
+
+Build and run (UI + backend; chat JSON in `history/` and `database/` are copied into the image at build time):
+
+```bash
+docker compose up --build
+```
+
+Open **http://localhost:8080**. The UI calls the API under `/api`, which nginx proxies to the Python stack.
+
+Optional: mount AWS credentials (file is gitignored and excluded from the image):
+
+```yaml
+# Under the tenant service in docker-compose.yml:
+volumes:
+  - ./scripts/aws_credentials.json:/app/scripts/aws_credentials.json:ro
+```
+
+Set `API_HOST` / `API_PORT` on the `tenant` service if you need a different bind (defaults: `0.0.0.0` and `5000`).
+
 ## How It Works
 
 1. User asks a question in the WebUI.

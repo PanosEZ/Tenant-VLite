@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import time
@@ -22,7 +23,9 @@ def main():
     # 3. Launch the API Gateway (serves the WebUI on port 5000)
     api_process = subprocess.Popen([sys.executable, "-u", "scripts/api.py"])
 
-    print("[TENANT] All systems online. API Gateway at http://127.0.0.1:5000")
+    _host = os.environ.get("API_HOST", "127.0.0.1")
+    _port = os.environ.get("API_PORT", "5000")
+    print(f"[TENANT] All systems online. API Gateway at http://{_host}:{_port}")
     print("[TENANT] Press Ctrl+C to shut down.")
 
     try:
