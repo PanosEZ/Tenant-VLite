@@ -187,37 +187,37 @@
             "role": "assistant",
             "content": [
                 {
-                    "text": "Θα αναζητήσω τα στοιχεία του χρήστη robertkaiser_2172 στο σύστημα.{{READ:account_lookup}}"
+                    "text": "Θα αναζητήσω τα στοιχεία του λογαριασμού robertkaiser_2172.{{READ:account_lookup}}"
                 }
             ],
             "thinking": "",
             "processing": false,
-            "timestamp": "2026-03-26T14:02:44.230Z"
+            "timestamp": "2026-03-31T11:51:18.952Z"
         },
         {
             "role": "assistant",
             "content": [
                 {
-                    "text": "Βρήκα τη σωστή λειτουργία. Θα αναζητήσω τα στοιχεία του robertkaiser_2172.{{TOOL:lookup_account}}"
+                    "text": "Τώρα θα αναζητήσω τα στοιχεία του λογαριασμού robertkaiser_2172.{{TOOL:account_lookup}}"
                 }
             ],
             "thinking": "",
             "processing": false,
-            "timestamp": "2026-03-26T14:02:45.346Z"
+            "timestamp": "2026-03-31T11:51:20.673Z"
         },
         {
             "role": "assistant",
             "content": [
                 {
-                    "text": "Ορίστε τα στοιχεία του **robertkaiser_2172**:\n\n| Πεδίο | Τιμή |\n|-------|------|\n| **Username** | robertkaiser_2172 |\n| **ID** | 2172 |\n| **Τύπος** | AGENT |\n| **Status** | ACTIVE |\n| **Email** | robertkaiser_2172@gmail.com |\n| **Νόμισμα** | USD |\n| **Ημερομηνία Δημιουργίας** | 01/02/2026 |\n| **Parent ID** | 28 (vshea_28) |\n\nΟ robertkaiser_2172 είναι **ενεργός sub-agent** κάτω από την κατοχή του vshea_28 (ID: 28), δημιουργήθηκε στις αρχές Φεβρουαρίου 2026 και χρησιμοποιεί USD ως βασικό νόμισμα."
+                    "text": "Ορίστε τα πλήρη στοιχεία του λογαριασμού **robertkaiser_2172**:\n\n| Πεδίο | Τιμή |\n|-------|------|\n| **Username** | robertkaiser_2172 |\n| **ID** | 2172 |\n| **Τύπος Λογαριασμού** | AGENT |\n| **Status** | ACTIVE |\n| **Email** | robertkaiser_2172@gmail.com |\n| **Νόμισμα** | USD |\n| **Ημερομηνία Δημιουργίας** | 01/02/2026 |\n| **Parent ID** | 28 (vshea_28) |\n\nΟ robertkaiser_2172 είναι **ενεργός sub-agent** που ανήκει στην ιεραρχία του vshea_28 (ID: 28), δημιουργήθηκε στις αρχές Φεβρουαρίου 2026 και χρησιμοποιεί USD ως βασικό νόμισμα."
                 }
             ],
             "thinking": "",
             "processing": false,
-            "timestamp": "2026-03-26T14:02:46.859Z",
-            "total_tokens": 5832
+            "timestamp": "2026-03-31T11:51:22.237Z",
+            "total_tokens": 6285
         }
     ],
     "context_diary": "Η λειτουργία lookup_account επιστρέφει λεπτομερή στοιχεία προφίλ με βάση το username, συμπεριλαμβανομένων ID, τύπου λογαριασμού, status, email, νομίσματος, ημερομηνίας δημιουργίας και parent_id για ιεραρχικές σχέσεις. Υποστηρίζει φιλτράρισμα επιστρεφόμενων πεδίων μέσω return_fields. Η ιεραρχία συνδέεται μέσω parent_id που δείχνει στον άμεσο προϊστάμενο. Η λειτουργία traverse_hierarchy επιτρέπει ανάλυση ιεραρχικών σχέσεων σε δύο κατευθύνσεις: children (υφιστάμενοι) και parents (προϊστάμενοι), επιστρέφοντας πλήρη λίστα με usernames, IDs, τύπους λογαριασμών και status με υποστήριξη πολλαπλών επιπέδων nesting. Το status \"SUSPENDED\" υποδεικνύει αναστολή λειτουργίας λογαριασμού χωρίς διαγραφή.",
-    "updatedAt": "2026-03-26T14:02:55Z"
+    "updatedAt": "2026-03-31T11:51:29Z"
 }

@@ -714,7 +714,7 @@ body {
 
 .history-search-divider {
     width: 1px;
-    height: 14px;
+    height: 22px;
     background: rgba(255, 255, 255, 0.12);
 }
 
@@ -768,6 +768,22 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.15s;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+.history-modal-close > i {
+    line-height: 1;
+}
+
+.history-modal-close > i.history-modal-close-search-icon {
+    font-size: calc(14 / 18 * 1em);
+}
+
+/* fa-xmark reads smaller than fa-magnifying-glass at the same em; nudge up to match neighbor */
+.history-modal-close-x-icon {
+    font-size: 1.1em;
+    line-height: 1;
 }
 
 .history-modal-close:hover {
@@ -1268,6 +1284,13 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.15s;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+.diary-modal-close > i {
+    line-height: 1;
+    font-size: 1em;
 }
 
 .diary-modal-close:hover {
@@ -1674,6 +1697,12 @@ body {
 
 .tool-chain-history-md {
     min-width: 0;
+}
+
+/* Latest tool: badge + pre-marker text stay outside the collapsible until another tool runs. */
+.tool-chain-current-step {
+    min-width: 0;
+    margin-bottom: 6px;
 }
 
 .message-active-tail {
@@ -2295,6 +2324,7 @@ body {
 /* ─── Responsive Settings ────────────────────────────── */
 @media (max-width: 768px) {
 
+
     .chain-step + .chain-step {
         margin-top: -16px;
     }
@@ -2556,6 +2586,13 @@ body {
     align-items: center;
     justify-content: center;
     transition: color 0.15s, background 0.15s, border-color 0.15s;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+.settings-modal-close > i {
+    line-height: 1;
+    font-size: 1em;
 }
 
 .settings-modal-close:hover {
@@ -2709,7 +2746,21 @@ body {
 /*
  * iOS also zooms when computed font-size on focused controls is < 16px.
  * html.tenant-phone-viewport is set by UA detection in index.html (not @media).
+ * Phone layout uses initial-scale 0.85 in index.html; bump modal control icons so they
+ * match perceived size vs desktop responsive preview at scale 1.
  */
+html.tenant-phone-viewport .history-modal-close {
+    font-size: 21px;
+}
+
+html.tenant-phone-viewport .diary-modal-close {
+    font-size: 17px;
+}
+
+html.tenant-phone-viewport .settings-modal-close {
+    font-size: 18px;
+}
+
 html.tenant-phone-viewport input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='button']):not([type='submit']):not([type='reset']):not([type='hidden']):not([type='image']),
 html.tenant-phone-viewport textarea,
 html.tenant-phone-viewport select {

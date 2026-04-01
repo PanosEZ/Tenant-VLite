@@ -228,6 +228,23 @@ function segmentToolMarkerChain(cleanedText) {
     return { archived, tail }
 }
 
+const TOOL_MARKER_START_RE = /\{\{(TOOL|READ):/g
+
+/** Strip a partially streamed marker suffix so markdown doesn’t flash raw `{{TOOL:`. */
+function toolTailForDisplay(tail) {
+    if (!tail) return tail
+    let lastStart = -1
+    let m
+    TOOL_MARKER_START_RE.lastIndex = 0
+    while ((m = TOOL_MARKER_START_RE.exec(tail)) !== null) {
+        lastStart = m.index
+    }
+    if (lastStart < 0) return tail
+    const from = tail.slice(lastStart)
+    if (/^\{\{(TOOL|READ):[^}]+\}\}$/.test(from)) return tail
+    return tail.slice(0, lastStart)
+}
+
 function ToolExecutionBadge({ marker }) {
     const toolMatch = marker.match(/^\{\{(TOOL|READ):(.+)\}\}$/)
     if (!toolMatch) return null
@@ -246,14 +263,29 @@ function ToolExecutionBadge({ marker }) {
     )
 }
 
-/** One expandable + one tail for the whole assistant chain (all steps’ text joined). */
+/**
+ * Expandable = earlier tool rounds, and (once answer text starts) the last round's pre-badge prose.
+ * Plain view always keeps the latest badge visible with the live/final answer tail.
+ */
 function AssistantGroupToolChainMarkdown({ groupMsgs, animateTail }) {
     const combined = groupMsgs.map(({ msg }) => stripAssistantMarkupNoise(msg.content[0].text)).join('\n\n')
-    const { archived, tail } = segmentToolMarkerChain(combined)
-    const tailTrimmed = tail.trim()
+    const { archived, tail: tailRaw } = segmentToolMarkerChain(combined)
+    const displayTail = toolTailForDisplay(tailRaw)
+    const tailTrimmed = displayTail.trim()
     const n = archived.length
+    const lastSeg = n > 0 ? archived[n - 1] : null
+    const postBadgeTextStarted = tailTrimmed.length > 0
+
+    const earlierRows =
+        n <= 1 ? [] : archived.slice(0, -1).map((seg) => ({ text: seg.text, marker: seg.marker, showBadge: true }))
+    const collapseRows =
+        n > 0 && postBadgeTextStarted
+            ? [...earlierRows, { text: lastSeg?.text || '', marker: lastSeg?.marker || null, showBadge: true }]
+            : earlierRows
+
+    const histN = collapseRows.length
     const summaryLabel =
-        n === 1 ? '1 earlier step' : `${n} earlier steps`
+        histN === 1 ? '1 earlier step' : `${histN} earlier steps`
 
     const [chainExpanded, setChainExpanded] = useState(false)
     const [panelHeight, setPanelHeight] = useState(0)
@@ -271,7 +303,7 @@ function AssistantGroupToolChainMarkdown({ groupMsgs, animateTail }) {
             setPanelHeight(Math.ceil(el.getBoundingClientRect().height) + 1)
         const id = requestAnimationFrame(apply)
         return () => cancelAnimationFrame(id)
-    }, [chainExpanded, combined])
+    }, [chainExpanded, combined, histN])
 
     const onChainToggle = () => {
         setChainExpanded((open) => !open)
@@ -279,7 +311,7 @@ function AssistantGroupToolChainMarkdown({ groupMsgs, animateTail }) {
 
     return (
         <>
-            {n > 0 && (
+            {histN > 0 && (
                 <div
                     className={`tool-chain-history${chainExpanded ? ' tool-chain-history--open' : ''}`}
                 >
@@ -300,28 +332,49 @@ function AssistantGroupToolChainMarkdown({ groupMsgs, animateTail }) {
                         style={{ height: panelHeight }}
                     >
                         <div ref={chainBodyRef} className="tool-chain-history-body">
-                            {archived.map((seg, si) => (
+                            {collapseRows.map((row, si) => (
                                 <div key={si} className="tool-chain-history-segment">
-                                    {seg.text.trim() ? (
+                                    {row.text.trim() ? (
                                         <div className="tool-chain-history-md">
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text.trim()}</ReactMarkdown>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{row.text.trim()}</ReactMarkdown>
                                         </div>
                                     ) : null}
-                                    <ToolExecutionBadge marker={seg.marker} />
+                                    {row.showBadge && row.marker ? <ToolExecutionBadge marker={row.marker} /> : null}
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
             )}
-            <div
-                className={`message-active-tail${animateTail ? ' message-active-tail--enter' : ''}`}
-                key={n}
-            >
-                {tailTrimmed ? (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{tailTrimmed}</ReactMarkdown>
-                ) : null}
-            </div>
+            {n === 0 ? (
+                <div
+                    className={`message-active-tail${animateTail ? ' message-active-tail--enter' : ''}`}
+                    key="tail-only"
+                >
+                    {tailTrimmed ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{tailTrimmed}</ReactMarkdown>
+                    ) : null}
+                </div>
+            ) : lastSeg ? (
+                <>
+                    <div className="tool-chain-current-step">
+                        {!postBadgeTextStarted && lastSeg.text.trim() ? (
+                            <div className="tool-chain-history-md">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{lastSeg.text.trim()}</ReactMarkdown>
+                            </div>
+                        ) : null}
+                        {!postBadgeTextStarted ? <ToolExecutionBadge marker={lastSeg.marker} /> : null}
+                    </div>
+                    <div
+                        className={`message-active-tail${animateTail ? ' message-active-tail--enter' : ''}`}
+                        key={`tail-${archived.length}`}
+                    >
+                        {tailTrimmed ? (
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{tailTrimmed}</ReactMarkdown>
+                        ) : null}
+                    </div>
+                </>
+            ) : null}
         </>
     )
 }
@@ -1114,7 +1167,9 @@ function App() {
                                 <i className="fa-solid fa-book-bookmark" style={{ marginRight: '12px', fontSize: '16px', color: '#ffffff' }} />
                                 Context - Memory
                             </h3>
-                            <button className="diary-modal-close" onClick={closeDiary}>✕</button>
+                            <button type="button" className="diary-modal-close" onClick={closeDiary} aria-label="Close">
+                                <i className="fa-solid fa-xmark" aria-hidden />
+                            </button>
                         </div>
                         <div className="diary-modal-body">
                             {selectedDiaryChat.context_diary ? (
@@ -1156,7 +1211,9 @@ function App() {
                                     </p>
                                 </div>
                                 {awsConfigured && (
-                                    <button type="button" className="settings-modal-close" onClick={closeSettings} aria-label="Close">✕</button>
+                                    <button type="button" className="settings-modal-close" onClick={closeSettings} aria-label="Close">
+                                        <i className="fa-solid fa-xmark" aria-hidden />
+                                    </button>
                                 )}
                             </div>
 
@@ -1247,6 +1304,7 @@ function App() {
                                     <span className="history-count-badge">+{chatList.length}</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
                                         <button
+                                            type="button"
                                             className="history-modal-close"
                                             onClick={() => {
                                                 setShowSearch(!showSearch);
@@ -1254,13 +1312,10 @@ function App() {
                                             }}
                                             title="Toggle search"
                                         >
-                                            <i className="fa-solid fa-magnifying-glass" style={{ fontSize: '14px' }} aria-hidden />
+                                            <i className="fa-solid fa-magnifying-glass history-modal-close-search-icon" aria-hidden />
                                         </button>
-                                        <button
-                                            className="history-modal-close"
-                                            onClick={closeHistory}
-                                        >
-                                            ✕
+                                        <button type="button" className="history-modal-close" onClick={closeHistory} aria-label="Close history">
+                                            <i className="fa-solid fa-xmark history-modal-close-x-icon" aria-hidden />
                                         </button>
                                     </div>
                                 </div>
@@ -1280,12 +1335,7 @@ function App() {
                                                     tabIndex={showSearch ? 0 : -1}
                                                 />
                                                 <div className="history-search-actions">
-                                                    <div className="history-search-icon">
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <circle cx="11" cy="11" r="8"></circle>
-                                                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                                        </svg>
-                                                    </div>
+
                                                     <div className="history-search-divider" />
                                                     <button
                                                         type="button"
@@ -1294,7 +1344,7 @@ function App() {
                                                         onClick={() => setSearchQuery('')}
                                                         tabIndex={showSearch ? 0 : -1}
                                                     >
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                                                             <line x1="2" y1="2" x2="22" y2="22"></line>
                                                         </svg>

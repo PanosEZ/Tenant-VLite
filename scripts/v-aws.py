@@ -6,16 +6,14 @@ import json
 import re
 import os
 
-
-
-
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
+
+from reader import consecutive_read_after_manual_only
 
 READER_REP_PORT = 5558
 EXECUTOR_REP_PORT = 5559
@@ -42,13 +40,13 @@ creds_path = os.path.join(script_dir, 'aws_credentials.json')
 
 REGION = "us-east-1"
 MODEL_ID = "moonshotai.kimi-k2.5"
-TEMPERATURE = 0.3
+TEMPERATURE = 0.7
 
 # Hot-reloadable boto3 client: rebuilds automatically when aws_credentials.json changes
 _client = None
 _creds_mtime = 0
 _last_used = 0
-IDLE_TIMEOUT = 180  # seconds — force new connection after 3 min idle
+IDLE_TIMEOUT = 120  # seconds — force new connection after 2 min idle
 
 def get_client():
     """Return a boto3 Bedrock client, rebuilding it if the credentials file changed
@@ -121,7 +119,13 @@ When you decide to use the read(x) command, you MUST always speak to the user na
 Example format:
 Let me pull up the manual to find the exact function for that.
 read(account_lookup)
+format you final response in a table when possible.
 
+"""
+
+# Injected only on Bedrock calls after tool/command execution (not the initial turn
+# or read-gate Q&A), so the model adds <CONTEXT> on the final answer, not mid-chain.
+CONTEXT_DIARY_RULE = """
 CRITICAL RULE FOR LONG TERM MEMORY ("DIARY"):
 When you finally answer the user's request after executing command(s) (i.e. you have completed a workflow and are providing the final answer), you MUST write a single, rolling summary paragraph wrapped in <CONTEXT>...</CONTEXT> tags.
 
@@ -135,8 +139,14 @@ strictly preserve learned patterns and high level concepts, successful logic flo
 Your goal is to maintain an evolving understanding of the system's workflow and logic conceptually. Do NOT use the <CONTEXT> tag for purely conversational turns where no commands were executed.
 the diary should not be longer than 200 words.
 STRICTLY never store attributes in the diary. store only behaviors on a conceptual level. store functional concepts and not direct database information.
+""".strip()
 
-"""
+
+def bedrock_system(dynamic_base: str, inject_diary: bool) -> str:
+    if not inject_diary:
+        return dynamic_base
+    return f"{dynamic_base.rstrip()}\n\n{CONTEXT_DIARY_RULE}"
+
 
 # --- ZMQ Setup ---
 context = zmq.Context()
@@ -217,6 +227,31 @@ print("[v-aws] Brain online. Listening for API requests on port 5557...")
 HISTORY_DIR = os.path.join(os.path.dirname(script_dir), "history")
 MAX_TOOL_ROUNDS = 10  # Safety cap to prevent infinite loops
 
+CONSECUTIVE_READ_GATE_PROMPT = """SYSTEM (read discipline): It has been detected that you attempted to run read(...) immediately after already performing a read(...) without an intervening <FUNCTION_CALL>.
+
+Was the previous read wrong or irrelevant to your case?
+
+Reply strictly with exactly one of these two phrases on a single line, and nothing else:
+yes it was
+no it wasn't
+
+Be extremely clear — no other text."""
+
+CONSECUTIVE_READ_BLOCKED_WARNING = """SYSTEM (read discipline): You indicated the previous manual was still relevant. Do not issue another read(x) until you have executed the appropriate <FUNCTION_CALL> for the manual you already received. Use that function and its output first; only use a new read if you still need a different category after that."""
+
+CONSECUTIVE_READ_AMBIGUOUS_WARNING = """SYSTEM (read discipline): Your reply was not recognized. The second read was not executed. Reply with exactly the phrase "yes it was" or "no it wasn't" (nothing else) if this check runs again."""
+
+
+def parse_consecutive_read_gate_reply(text: str) -> str:
+    """Return 'allow', 'block', or 'ambiguous'."""
+    t = (text or "").strip().lower()
+    if re.search(r"no\s*,?\s*it\s+wasn'?t", t):
+        return "block"
+    if re.search(r"yes\s*,?\s*it\s+was\b", t):
+        return "allow"
+    return "ambiguous"
+
+
 while True:
     # Wait for a request from a specific api.py client
     identity, request_bytes = api_socket.recv_multipart()
@@ -262,7 +297,7 @@ while True:
         response = get_client().converse(
             modelId=model_id,
             messages=messages,
-            system=[{"text": dynamic_system_prompt}],
+            system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False)}],
             inferenceConfig={"temperature": TEMPERATURE}
         )
 
@@ -297,6 +332,126 @@ while True:
         while has_tool and tool_round < MAX_TOOL_ROUNDS:
             tool_round += 1
             print(f"[v-aws] Tool trigger #{tool_round} — RPC reader + executor...")
+
+            if (
+                "read(" in bot_reply
+                and consecutive_read_after_manual_only(messages, bot_reply)
+            ):
+                print("[v-aws] Consecutive read after manual-only — gate before reader RPC...")
+                messages.append(
+                    {"role": "user", "content": [{"text": CONSECUTIVE_READ_GATE_PROMPT}]}
+                )
+                sanitize_messages(messages)
+                gate_resp = get_client().converse(
+                    modelId=model_id,
+                    messages=messages,
+                    system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False)}],
+                    inferenceConfig={"temperature": TEMPERATURE},
+                )
+                gate_reply = gate_resp["output"]["message"]["content"][0]["text"]
+                gu = gate_resp.get("usage", {})
+                total_tokens += gu.get("inputTokens", 0) + gu.get("outputTokens", 0)
+                print(f"\n[TENANT] (consecutive-read gate) {gate_reply}")
+                print(f"[TOKENS] cumulative={total_tokens}")
+                gate_payload = json.dumps(
+                    {"text": gate_reply, "tool_active": False}
+                ).encode()
+                api_socket.send_multipart([identity, gate_payload])
+                messages.append(
+                    {"role": "assistant", "content": [{"text": gate_reply}]}
+                )
+
+                decision = parse_consecutive_read_gate_reply(gate_reply)
+                if decision == "block":
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": [{"text": CONSECUTIVE_READ_BLOCKED_WARNING}],
+                        }
+                    )
+                    sanitize_messages(messages)
+                    follow = get_client().converse(
+                        modelId=model_id,
+                        messages=messages,
+                        system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=True)}],
+                        inferenceConfig={"temperature": TEMPERATURE},
+                    )
+                    bot_reply = follow["output"]["message"]["content"][0]["text"]
+                    fu = follow.get("usage", {})
+                    total_tokens += fu.get("inputTokens", 0) + fu.get(
+                        "outputTokens", 0
+                    )
+                    print(f"\n[TENANT] (after read gate — blocked second read) {bot_reply}")
+                    has_tool = "read(" in bot_reply or "<FUNCTION_CALL>" in bot_reply
+                    display_text = (
+                        truncate_at_tool(bot_reply) if has_tool else bot_reply
+                    )
+                    api_socket.send_multipart(
+                        [
+                            identity,
+                            json.dumps(
+                                {"text": display_text, "tool_active": has_tool}
+                            ).encode(),
+                        ]
+                    )
+                    if has_tool:
+                        api_socket.send_multipart(
+                            [identity, json.dumps({"chain_step": True}).encode()]
+                        )
+                    messages.append(
+                        {"role": "assistant", "content": [{"text": display_text}]}
+                    )
+                    publisher.send_string(
+                        json.dumps({"chat_id": chat_id, "text": bot_reply})
+                    )
+                    continue
+                if decision == "ambiguous":
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": [{"text": CONSECUTIVE_READ_AMBIGUOUS_WARNING}],
+                        }
+                    )
+                    sanitize_messages(messages)
+                    amb = get_client().converse(
+                        modelId=model_id,
+                        messages=messages,
+                        system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False)}],
+                        inferenceConfig={"temperature": TEMPERATURE},
+                    )
+                    bot_reply = amb["output"]["message"]["content"][0]["text"]
+                    au = amb.get("usage", {})
+                    total_tokens += au.get("inputTokens", 0) + au.get(
+                        "outputTokens", 0
+                    )
+                    print(
+                        f"\n[TENANT] (after read gate — ambiguous) {bot_reply}"
+                    )
+                    has_tool = "read(" in bot_reply or "<FUNCTION_CALL>" in bot_reply
+                    display_text = (
+                        truncate_at_tool(bot_reply) if has_tool else bot_reply
+                    )
+                    api_socket.send_multipart(
+                        [
+                            identity,
+                            json.dumps(
+                                {"text": display_text, "tool_active": has_tool}
+                            ).encode(),
+                        ]
+                    )
+                    if has_tool:
+                        api_socket.send_multipart(
+                            [identity, json.dumps({"chain_step": True}).encode()]
+                        )
+                    messages.append(
+                        {"role": "assistant", "content": [{"text": display_text}]}
+                    )
+                    publisher.send_string(
+                        json.dumps({"chat_id": chat_id, "text": bot_reply})
+                    )
+                    continue
+                # decision == "allow": proceed with fetch; gate Q/A stays in context.
+
             tool_result = fetch_tool_results_from_workers(bot_reply)
             if tool_result is None:
                 tool_result = (
@@ -313,7 +468,7 @@ while True:
             response = get_client().converse(
                 modelId=model_id,
                 messages=messages,
-                system=[{"text": dynamic_system_prompt}],
+                system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=True)}],
                 inferenceConfig={"temperature": TEMPERATURE}
             )
             bot_reply = response['output']['message']['content'][0]['text']
@@ -339,15 +494,21 @@ while True:
             # Add the truncated reply to conversation history
             messages.append({"role": "assistant", "content": [{"text": display_text}]})
 
-            # The tool result (messages[-2]) has now been consumed by the model.
-            # Replace it with a short summary so it doesn't bloat subsequent calls.
-            if len(messages) >= 2 and messages[-2]["role"] == "user":
-                prev_text = messages[-2]["content"][0]["text"]
-                if prev_text.startswith("SYSTEM TOOL FEEDBACK:"):
-                    lines = prev_text.split('\n')
-                    summary = lines[1].strip() if len(lines) > 1 else "tool result"
-                    messages[-2]["content"][0]["text"] = f"[Delivered — {summary}]"
-                    print(f"[v-aws] Compressed consumed tool result: {summary}")
+            # ---------------------------------------------------------------------
+            # INTELLIGENT TOKEN PRUNING
+            # We compress the manual reads to save tokens, but STRICTLY PRESERVE 
+            # <FUNCTION_CALL> data so the model can format it into the final table.
+            # ---------------------------------------------------------------------
+            if len(messages) >= 3 and messages[-2]["role"] == "user" and messages[-3]["role"] == "assistant":
+                prev_bot_text = messages[-3]["content"][0]["text"]
+                
+                # If the bot just did a 'read()' but NOT a database function execution
+                if "read(" in prev_bot_text and "<FUNCTION_CALL>" not in prev_bot_text:
+                    prev_user_text = messages[-2]["content"][0]["text"]
+                    messages[-2]["content"][0]["text"] = f"[Delivered manual content — {len(prev_user_text)} characters]"
+                    print("[v-aws] Compressed consumed read() manual to save tokens.")
+                else:
+                    print("[v-aws] Preserved raw <FUNCTION_CALL> data in context memory.")
 
             publisher.send_string(json.dumps({"chat_id": chat_id, "text": bot_reply}))
 

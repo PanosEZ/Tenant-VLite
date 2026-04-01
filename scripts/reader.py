@@ -54,6 +54,38 @@ def tool_read_result(bot_reply: str) -> str | None:
     return run_manual_read(cat)
 
 
+def user_message_is_manual_read_delivery(text: str) -> bool:
+    """True if this user message is the manual content from a prior read() tool round."""
+    if not text or not text.strip():
+        return False
+    if "SYSTEM TOOL FEEDBACK:" in text and "Successfully read" in text:
+        return True
+    if text.strip().startswith("[Delivered manual content"):
+        return True
+    return False
+
+
+def consecutive_read_after_manual_only(messages: list, bot_reply: str) -> bool:
+    """
+    True when the model is about to run read() again immediately after a read-only
+    assistant turn whose tool result was the manual (no intervening <FUNCTION_CALL>).
+    messages[-1] must be the assistant message matching bot_reply.
+    """
+    if "read(" not in bot_reply or len(messages) < 3:
+        return False
+    if messages[-1].get("role") != "assistant":
+        return False
+    prev_user = messages[-2]
+    prev_asst = messages[-3]
+    if prev_user.get("role") != "user" or prev_asst.get("role") != "assistant":
+        return False
+    prev_asst_text = prev_asst["content"][0].get("text", "")
+    if "read(" not in prev_asst_text or "<FUNCTION_CALL>" in prev_asst_text:
+        return False
+    prev_user_text = prev_user["content"][0].get("text", "")
+    return user_message_is_manual_read_delivery(prev_user_text)
+
+
 def start_reader():
     context = zmq.Context()
     socket = context.socket(zmq.REP)

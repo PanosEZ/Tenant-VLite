@@ -24,9 +24,11 @@ The system uses a multi-process architecture communicating via ZeroMQ:
 
 **macOS/Linux:**
 ```bash
-chmod +x setup.sh
+chmod +x setup.sh startup.sh
 ./setup.sh
 ```
+
+After the first successful setup, start the stack anytime with `./startup.sh` (no dependency reinstall). `startup.sh` refuses to run until `setup.sh` has completed at least once.
 
 **Windows:**
 ```cmd
@@ -36,12 +38,18 @@ setup.bat
 The setup scripts will create a virtual environment, install dependencies, prompt for AWS credentials, and start the system.
 
 ### Manual Start
-If you've already run the setup script once, you can start the system directly using two terminals:
+If you've already run the setup script once, you can start the system with:
+
+```bash
+./startup.sh
+```
+
+Or using two terminals:
 
 **Terminal 1 (Backend):**
 ```bash
 source venv/bin/activate  # Or venv\Scripts\activate on Windows
-python scripts/tenant.py
+python tenant.py
 ```
 
 **Terminal 2 (Frontend):**

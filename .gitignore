@@ -22,3 +22,6 @@ Thumbs.db
 
 # Credentials
 aws_credentials.json
+
+# Local setup marker (created by setup.sh after a successful install)
+.tenant_vlite_setup_complete

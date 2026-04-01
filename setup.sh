@@ -3,6 +3,11 @@
 # Exit on error
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+SETUP_MARKER="$SCRIPT_DIR/.tenant_vlite_setup_complete"
+
 echo "[SETUP] Starting Tenant-VLite Environment Setup"
 
 # 1. Check if the venv directory exists
@@ -31,6 +36,8 @@ cd webui
 npm install
 cd ..
 
-# 6. Run the tenant.py main boot script
-echo "[SETUP] Starting the Tenant-VLite server..."
-python3 tenant.py
+touch "$SETUP_MARKER"
+echo "[SETUP] Environment setup finished."
+
+echo "[SETUP] Launching Tenant-VLite via startup.sh..."
+exec "$SCRIPT_DIR/startup.sh"

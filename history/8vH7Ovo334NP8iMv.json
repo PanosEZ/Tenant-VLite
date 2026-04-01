@@ -1,0 +1,51 @@
+{
+    "id": "8vH7Ovo334NP8iMv",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "Give me a table with 5 random agents who use USD as their currency"
+                }
+            ],
+            "timestamp": "2026-03-31T11:59:50.231Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I'll help you get that information. Let me check the manual for the appropriate function to retrieve agent data with currency filtering.{{READ:account_lookup}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-31T11:59:50.231Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Perfect! I can see that `account_lookup` supports filtering by `currency` and `type`. Let me retrieve 5 agents who use USD as their currency.{{TOOL:account_lookup}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-31T11:59:51.493Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Here's your table of 5 random agents who use USD as their currency:\n\n| Username | ID | Email | Status |\n|----------|-----|-------|--------|\n| vshea_28 | 28 | vshea_28@gmail.com | ACTIVE |\n| michaelbrown_58 | 58 | michaelbrown_58@gmail.com | ACTIVE |\n| christopherscott_62 | 62 | christopherscott_62@icloud.com | ACTIVE |\n| mmcpherson_100 | 100 | mmcpherson_100@gmail.com | ACTIVE |\n| brooksmonica_135 | 135 | brooksmonica_135@hotmail.com | ACTIVE |\n\n*Note: There are 506 total USD agents in the system; this is a random sample of 5.*"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-03-31T11:59:52.697Z",
+            "total_tokens": 3536
+        }
+    ],
+    "context_diary": "The account_lookup function supports filtering by user type (AGENT, USER, ADMIN) and currency, with configurable return fields and result limits. When querying large datasets, the system automatically caps results and reports total matches available, requiring explicit narrowing for complete data retrieval.",
+    "updatedAt": "2026-03-31T11:59:56Z"
+}

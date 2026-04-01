@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import random
 
 DB_FILE = "database/tenant_dev.users.json"
 
@@ -16,8 +17,9 @@ def account_lookup(args):
 
     # 1. Extract special control arguments BEFORE filtering the database
     # Default limit is 50 to prevent catastrophic token overflow
-    limit = args.pop("limit", 50) 
+    limit = args.pop("limit", 50)
     return_fields = args.pop("return_fields", [])
+    random_sample = bool(args.pop("random", False))
 
     # 2. Filter the database based on the remaining args
     for record in db:
@@ -40,8 +42,12 @@ def account_lookup(args):
 
     total_matches = len(results)
 
-    # 3. Apply the limit (Pagination)
-    results = results[:limit]
+    # 3. Apply the limit (optionally random sample of matches)
+    if random_sample:
+        k = min(limit, len(results))
+        results = random.sample(results, k) if k else []
+    else:
+        results = results[:limit]
 
     # 4. Apply the projection (Return Fields)
     if return_fields and isinstance(return_fields, list):

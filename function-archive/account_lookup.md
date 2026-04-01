@@ -10,6 +10,7 @@ Queries the database for direct document matches. To protect the system from mem
 ## Arguments
 * `return_fields` (list of strings, optional): Specify EXACTLY which fields to return (e.g., `["username", "id"]`). If the user only asks for names, only request names.
 * `limit` (integer, optional): Maximum number of records to return. Default is 50.
+* `random` (boolean, optional): If `true`, draw up to `limit` records uniformly at random from all matches (without replacement). If `false` or omitted, results keep a stable order (first matches in storage order). Use for requests like "a random agent" or "10 random users".
 * `id` (string, optional): Exact `id` (e.g., "1", "7").
 * `username` (string, optional): Exact username (e.g., "admin", "agent1"). (note: if the user is asking for the admin of the app, just see how many admins are there or if there is only one or few just respond accordingly)
 * `email` (string, optional): Exact email address.
@@ -25,6 +26,7 @@ Queries the database for direct document matches. To protect the system from mem
 * **Example Queries:** 
   * "What is the email for account ID 10?" -> Request only `["email"]`.
   * "Can you tell me the name of each agent?" -> Request `type: AGENT`, and `return_fields: ["username", "id"]`.
+  * "Give me 5 random agents" -> `type: AGENT`, `limit: 5`, `random: true`, plus needed `return_fields`.
 * **Do NOT trigger when:** The user asks about downlines, parents, or aggregate counts.
 
 ## CRITICAL — Output Format
@@ -37,6 +39,8 @@ Example:
 <FUNCTION_CALL>
 {"function": "account_lookup", "arguments": {"type": "AGENT", "return_fields": ["username", "id"], "limit": 10}}
 </FUNCTION_CALL>
+
+For a random subset of matches, include `"random": true` in `arguments` (e.g. with `"limit": 5`).
 
 You are free to include any text with your thoughts and reasoning before writing the final <FUNCTION_CALL> block. Do NOT fabricate results.
 --- END OF FILE account_lookup.md ---
