@@ -1,0 +1,51 @@
+{
+    "id": "hBHvns2p8SidYpHu",
+    "title": "",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "text": "Give me a table with 5 random agents who use USD as their currency"
+                }
+            ],
+            "timestamp": "2026-04-01T08:26:06.208Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "I'll help you find agents with USD currency. Let me check the account lookup functions to see how to query this.{{READ:account_lookup}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-04-01T08:26:06.208Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Perfect! I can see the account_lookup function supports filtering by `type` and `currency`, and has a `random` parameter for random selection. Let me query for 5 random agents with USD currency.{{TOOL:account_lookup}}"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-04-01T08:26:07.483Z"
+        },
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "text": "Here are 5 random agents using USD as their currency:\n\n| Username | ID | Email | Status |\n|----------|-----|-------|--------|\n| jennifer76_9903 | 9903 | jennifer76_9903@gmail.com | ACTIVE |\n| smithsamantha_6050 | 6050 | smithsamantha_6050@gmail.com | ACTIVE |\n| camposaustin_4387 | 4387 | camposaustin_4387@outlook.com | ACTIVE |\n| ian72_7498 | 7498 | ian72_7498@gmail.com | ACTIVE |\n| marquezmonique_2221 | 2221 | marquezmonique_2221@gmail.com | ACTIVE |\n\n*Note: There are 506 total agents with USD currency in the system.*"
+                }
+            ],
+            "thinking": "",
+            "processing": false,
+            "timestamp": "2026-04-01T08:26:09.633Z",
+            "total_tokens": 3478
+        }
+    ],
+    "context_diary": "The account_lookup function supports filtering by user type (AGENT, USER, ADMIN), currency code, and includes a random parameter for randomized sampling. Results can be limited with the limit parameter to prevent system overload, and specific return fields can be requested. The function returns total match counts alongside paginated results, which is useful for understanding dataset scale.",
+    "updatedAt": "2026-04-01T08:26:14Z"
+}

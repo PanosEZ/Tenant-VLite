@@ -43,8 +43,12 @@ pushd webui
 call npm install
 popd
 
-REM 6. Run the tenant.py main boot script
-echo [SETUP] Starting the Tenant-VLite server...
-python tenant.py
+REM 6. Create setup marker
+echo. > "%~dp0.tenant_vlite_setup_complete"
+echo [SETUP] Environment setup finished.
+
+REM 7. Launch Tenant-VLite via startup.bat
+echo [SETUP] Launching Tenant-VLite via startup.bat...
+call "%~dp0startup.bat"
 
 goto :eof

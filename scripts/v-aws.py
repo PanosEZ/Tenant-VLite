@@ -40,7 +40,7 @@ creds_path = os.path.join(script_dir, 'aws_credentials.json')
 
 REGION = "us-east-1"
 MODEL_ID = "moonshotai.kimi-k2.5"
-TEMPERATURE = 0.7
+TEMPERATURE = 0.2
 
 # Hot-reloadable boto3 client: rebuilds automatically when aws_credentials.json changes
 _client = None
