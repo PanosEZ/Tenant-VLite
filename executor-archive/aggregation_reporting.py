@@ -2,13 +2,15 @@ import sys
 import json
 import os
 from collections import defaultdict
+from pathlib import Path
 
-DB_FILE = "database/tenant_dev.users.json"
+DB_FILE = str(Path(__file__).resolve().parent.parent / "database" / "tenant_dev.users.json")
+
 
 def load_db():
     if not os.path.exists(DB_FILE):
         return []
-    with open(DB_FILE, 'r') as f:
+    with open(DB_FILE, "r") as f:
         return json.load(f)
 
 def extract_val(val):
@@ -16,38 +18,61 @@ def extract_val(val):
         return val["$date"]
     return val
 
+
+def unwrap_filter_scalar(val):
+    """Match Mongo extended JSON date literals used inside filter values."""
+    if isinstance(val, dict) and "$date" in val:
+        return val["$date"]
+    return val
+
+
 def evaluate_condition(record_val, condition):
+    if isinstance(condition, dict) and len(condition) == 1 and "$date" in condition:
+        return evaluate_condition(record_val, condition["$date"])
+
     # 1. Exact Match Logic (Case-insensitive for strings)
     if not isinstance(condition, dict):
+        condition = unwrap_filter_scalar(condition)
         if isinstance(record_val, str) and isinstance(condition, str):
             return record_val.lower() == condition.lower()
-        return record_val == condition 
+        return record_val == condition
 
     # 2. Advanced Operators Logic
     for op, target_val in condition.items():
-        if op == "$gte" and not (record_val >= target_val): return False
-        if op == "$lte" and not (record_val <= target_val): return False
-        if op == "$gt" and not (record_val > target_val): return False
-        if op == "$lt" and not (record_val < target_val): return False
-        
+        target_val = unwrap_filter_scalar(target_val)
+        if op == "$gte" and not (record_val >= target_val):
+            return False
+        if op == "$lte" and not (record_val <= target_val):
+            return False
+        if op == "$gt" and not (record_val > target_val):
+            return False
+        if op == "$lt" and not (record_val < target_val):
+            return False
+
         if op == "$in":
+            unwrapped_in = [unwrap_filter_scalar(v) for v in target_val]
             if isinstance(record_val, str):
-                # Case-insensitive $in check
-                if not any(isinstance(v, str) and record_val.lower() == v.lower() for v in target_val):
+                if not any(
+                    isinstance(v, str) and record_val.lower() == v.lower() for v in unwrapped_in
+                ):
                     return False
             else:
-                if record_val not in target_val: return False
-                
+                if record_val not in unwrapped_in:
+                    return False
+
         if op == "$ne":
             if isinstance(record_val, str) and isinstance(target_val, str):
-                if record_val.lower() == target_val.lower(): return False
+                if record_val.lower() == target_val.lower():
+                    return False
             else:
-                if record_val == target_val: return False
-                
+                if record_val == target_val:
+                    return False
+
         if op == "$exists":
             exists = record_val is not None
-            if exists != target_val: return False
-            
+            if exists != target_val:
+                return False
+
     return True
 
 def resolve_id_by_username(db, username):

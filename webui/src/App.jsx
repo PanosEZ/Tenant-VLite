@@ -47,6 +47,26 @@ function resolveModelId(models, selectedId) {
     return models[0]?.id ?? DEFAULT_MODEL_CATALOG[0].id
 }
 
+/** Sent with /chat so the model sees the user's browser wall clock. */
+function getClientClockPayload() {
+    try {
+        return {
+            client_local_time: new Date().toLocaleString(undefined, {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true,
+            }),
+        }
+    } catch {
+        return {}
+    }
+}
+
 function ModelPicker({ models, value, onChange, disabled }) {
     const [open, setOpen] = useState(false)
     const rootRef = useRef(null)
@@ -858,6 +878,7 @@ function App() {
                     messages: payloadMessages,
                     chat_id: currentChatId,
                     model_id: resolveModelId(modelsList, selectedModelId),
+                    ...getClientClockPayload(),
                 }),
                 signal: controller.signal,
             })
@@ -1006,6 +1027,7 @@ function App() {
                     messages: payloadMessages,
                     chat_id: currentChatId,
                     model_id: resolveModelId(modelsList, selectedModelId),
+                    ...getClientClockPayload(),
                 }),
                 signal: controller.signal,
             })

@@ -1,5 +1,7 @@
 import boto3
 from botocore.config import Config
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import sys, asyncio, time
 import zmq
 import json
@@ -142,10 +144,33 @@ STRICTLY never store attributes in the diary. store only behaviors on a conceptu
 """.strip()
 
 
-def bedrock_system(dynamic_base: str, inject_diary: bool) -> str:
+def _server_fallback_stamp() -> str:
+    """Wall clock when the client did not send a browser time."""
+    tz_name = (os.environ.get("TENANT_TIMEZONE") or os.environ.get("TZ") or "").strip()
+    if tz_name:
+        try:
+            local = datetime.now(ZoneInfo(tz_name))
+        except Exception:
+            local = datetime.now().astimezone()
+    else:
+        local = datetime.now().astimezone()
+    return f"Now: {local.strftime('%Y-%m-%d %H:%M')} {local.tzname() or local.strftime('%z')}."
+
+
+def _clock_stamp_line(client_clock: dict | None) -> str:
+    cc = client_clock or {}
+    local = (cc.get("client_local_time") or "").strip()
+    if local:
+        return f"Now: {local}."
+    return _server_fallback_stamp()
+
+
+def bedrock_system(dynamic_base: str, inject_diary: bool, client_clock: dict | None = None) -> str:
+    stamp = _clock_stamp_line(client_clock)
+    base = f"{stamp}\n\n{dynamic_base.rstrip()}"
     if not inject_diary:
-        return dynamic_base
-    return f"{dynamic_base.rstrip()}\n\n{CONTEXT_DIARY_RULE}"
+        return base
+    return f"{base}\n\n{CONTEXT_DIARY_RULE}"
 
 
 # --- ZMQ Setup ---
@@ -259,6 +284,10 @@ while True:
     messages = request.get("messages", [])
     chat_id = request.get("chat_id", "")
     model_id = request.get("model_id") or MODEL_ID
+    client_clock = None
+    _cl = request.get("client_local_time")
+    if isinstance(_cl, str) and _cl.strip():
+        client_clock = {"client_local_time": _cl.strip()}
 
     if not messages:
         api_socket.send_multipart([identity, json.dumps({"error": "No messages provided", "done": True}).encode()])
@@ -297,7 +326,7 @@ while True:
         response = get_client().converse(
             modelId=model_id,
             messages=messages,
-            system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False)}],
+            system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False, client_clock=client_clock)}],
             inferenceConfig={"temperature": TEMPERATURE}
         )
 
@@ -345,7 +374,7 @@ while True:
                 gate_resp = get_client().converse(
                     modelId=model_id,
                     messages=messages,
-                    system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False)}],
+                    system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False, client_clock=client_clock)}],
                     inferenceConfig={"temperature": TEMPERATURE},
                 )
                 gate_reply = gate_resp["output"]["message"]["content"][0]["text"]
@@ -373,7 +402,7 @@ while True:
                     follow = get_client().converse(
                         modelId=model_id,
                         messages=messages,
-                        system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=True)}],
+                        system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=True, client_clock=client_clock)}],
                         inferenceConfig={"temperature": TEMPERATURE},
                     )
                     bot_reply = follow["output"]["message"]["content"][0]["text"]
@@ -416,7 +445,7 @@ while True:
                     amb = get_client().converse(
                         modelId=model_id,
                         messages=messages,
-                        system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False)}],
+                        system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=False, client_clock=client_clock)}],
                         inferenceConfig={"temperature": TEMPERATURE},
                     )
                     bot_reply = amb["output"]["message"]["content"][0]["text"]
@@ -468,7 +497,7 @@ while True:
             response = get_client().converse(
                 modelId=model_id,
                 messages=messages,
-                system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=True)}],
+                system=[{"text": bedrock_system(dynamic_system_prompt, inject_diary=True, client_clock=client_clock)}],
                 inferenceConfig={"temperature": TEMPERATURE}
             )
             bot_reply = response['output']['message']['content'][0]['text']

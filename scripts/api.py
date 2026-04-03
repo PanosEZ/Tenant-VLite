@@ -292,6 +292,11 @@ async def chat(request: Request):
     if model_id not in allowed_ids:
         model_id = default_id
 
+    client_clock = {}
+    _lt = body.get("client_local_time")
+    if isinstance(_lt, str) and _lt.strip():
+        client_clock["client_local_time"] = _lt.strip()
+
     # Strip frontend display markers from messages before sending to model
     clean_messages = []
     for msg in messages:
@@ -314,7 +319,12 @@ async def chat(request: Request):
         try:
             # Send the conversation + chat_id to v-aws.py
             await sock.send_json(
-                {"messages": clean_messages, "chat_id": chat_id, "model_id": model_id}
+                {
+                    "messages": clean_messages,
+                    "chat_id": chat_id,
+                    "model_id": model_id,
+                    **client_clock,
+                }
             )
 
             # Continuously yield chunks to the frontend as v-aws sends them

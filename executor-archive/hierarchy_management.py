@@ -1,8 +1,10 @@
 import sys
 import json
 import os
+from pathlib import Path
 
-DB_FILE = "database/tenant_dev.users.json"
+DB_FILE = str(Path(__file__).resolve().parent.parent / "database" / "tenant_dev.users.json")
+
 
 def load_db():
     if not os.path.exists(DB_FILE):
