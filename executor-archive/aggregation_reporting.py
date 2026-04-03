@@ -1,8 +1,54 @@
 import sys
 import json
 import os
+import re
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+_DAY_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _next_utc_day_start_iso(day_yyyy_mm_dd: str) -> str:
+    d = datetime.strptime(day_yyyy_mm_dd, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    return (d + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def _is_calendar_date_string(s) -> bool:
+    if not isinstance(s, str) or not _DAY_ONLY.match(s):
+        return False
+    try:
+        datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
+def _normalize_aggregation_filters(filters):
+    """Expand calendar-day strings and last_login_day like account_lookup (UTC day ranges)."""
+    if not isinstance(filters, dict):
+        return filters, None
+    out = dict(filters)
+    if "last_login_day" in out:
+        if "last_login_at" in out:
+            return None, "Use last_login_day or last_login_at in filters, not both."
+        day = out.pop("last_login_day")
+        if not _is_calendar_date_string(day):
+            return None, "last_login_day must be a valid UTC calendar date YYYY-MM-DD."
+        out["last_login_at"] = {
+            "$gte": f"{day}T00:00:00.000Z",
+            "$lt": _next_utc_day_start_iso(day),
+        }
+    for field in ("last_login_at", "created_at", "updated_at"):
+        if field not in out:
+            continue
+        val = out[field]
+        if isinstance(val, str) and _is_calendar_date_string(val):
+            out[field] = {
+                "$gte": f"{val}T00:00:00.000Z",
+                "$lt": _next_utc_day_start_iso(val),
+            }
+    return out, None
 
 DB_FILE = str(Path(__file__).resolve().parent.parent / "database" / "tenant_dev.users.json")
 
@@ -40,13 +86,13 @@ def evaluate_condition(record_val, condition):
     # 2. Advanced Operators Logic
     for op, target_val in condition.items():
         target_val = unwrap_filter_scalar(target_val)
-        if op == "$gte" and not (record_val >= target_val):
+        if op == "$gte" and (record_val is None or not (record_val >= target_val)):
             return False
-        if op == "$lte" and not (record_val <= target_val):
+        if op == "$lte" and (record_val is None or not (record_val <= target_val)):
             return False
-        if op == "$gt" and not (record_val > target_val):
+        if op == "$gt" and (record_val is None or not (record_val > target_val)):
             return False
-        if op == "$lt" and not (record_val < target_val):
+        if op == "$lt" and (record_val is None or not (record_val < target_val)):
             return False
 
         if op == "$in":
@@ -90,6 +136,10 @@ def generate_aggregation_report(args):
 
     if not metric:
         return {"status": "error", "message": "Missing required argument 'metric'"}
+
+    filters, ferr = _normalize_aggregation_filters(filters)
+    if ferr:
+        return {"status": "error", "message": ferr}
 
     db = load_db()
 

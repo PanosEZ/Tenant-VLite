@@ -13,6 +13,7 @@ DB_FILE = str(Path(__file__).resolve().parent.parent / "database" / "tenant_dev.
 _DAY_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _UNSUPPORTED_META_KEYS = frozenset({"sort", "sort_by", "order_by"})
 _REGISTRATION_DAY_ALIASES = ("registration_day", "registration_date", "registered_at")
+_LAST_LOGIN_DAY_KEY = "last_login_day"
 _DISCOVERY_RETURN_FIELDS = [
     "id",
     "username",
@@ -21,6 +22,9 @@ _DISCOVERY_RETURN_FIELDS = [
     "status",
     "created_at",
     "updated_at",
+    "last_login_at",
+    "last_login_ip",
+    "last_login_device",
 ]
 
 def load_db():
@@ -46,13 +50,13 @@ def _is_calendar_date_string(s: str) -> bool:
     return True
 
 
-def _coerce_created_at_day_range(args: dict) -> None:
-    """Turn created_at: 'YYYY-MM-DD' into a UTC day range (records store ISO strings)."""
-    if "created_at" not in args:
+def _coerce_field_day_range(args: dict, field: str) -> None:
+    """Turn field: 'YYYY-MM-DD' into a UTC day range (BSON dates are compared as ISO strings)."""
+    if field not in args:
         return
-    val = args["created_at"]
+    val = args[field]
     if isinstance(val, str) and _is_calendar_date_string(val):
-        args["created_at"] = {
+        args[field] = {
             "$gte": f"{val}T00:00:00.000Z",
             "$lt": _next_utc_day_start_iso(val),
         }
@@ -73,6 +77,13 @@ def _consume_registration_day_aliases(args: dict):
             f"(got {found})."
         )
     return values[0], None
+
+
+def _consume_last_login_day(args: dict):
+    """last_login_day: YYYY-MM-DD UTC -> last_login_at range. Mutates args."""
+    if _LAST_LOGIN_DAY_KEY not in args:
+        return None, None
+    return args.pop(_LAST_LOGIN_DAY_KEY), None
 
 
 def _expand_return_fields_star(return_fields):
@@ -150,7 +161,26 @@ def account_lookup(args):
             "$lt": _next_utc_day_start_iso(registration_day),
         }
     else:
-        _coerce_created_at_day_range(args)
+        _coerce_field_day_range(args, "created_at")
+
+    last_login_day, _ = _consume_last_login_day(args)
+    if last_login_day:
+        if "last_login_at" in args:
+            return {
+                "status": "error",
+                "message": "Use last_login_day or last_login_at, not both.",
+            }
+        if not _is_calendar_date_string(last_login_day):
+            return {
+                "status": "error",
+                "message": "last_login_day must be a valid UTC calendar date YYYY-MM-DD.",
+            }
+        args["last_login_at"] = {
+            "$gte": f"{last_login_day}T00:00:00.000Z",
+            "$lt": _next_utc_day_start_iso(last_login_day),
+        }
+    else:
+        _coerce_field_day_range(args, "last_login_at")
 
     if output_format == "pipe" and not return_fields:
         return_fields = ["id", "username", "email"]
@@ -193,10 +223,11 @@ def account_lookup(args):
         response["ignored_unsupported_arguments"] = ignored_meta
         response["hint"] = (
             "account_lookup does not support sort/order. Registration time is filtered via "
-            "`created_at` (stored as ISO strings). For one UTC calendar day use "
-            "registration_day, registration_date, or registered_at as YYYY-MM-DD, or "
-            "created_at: \"YYYY-MM-DD\", or a $gte/$lt range. return_fields: [\"*\"] expands to "
-            "a small discovery set including created_at."
+            "`created_at`; last activity via `last_login_at`, `last_login_ip`, `last_login_device`. "
+            "For one UTC calendar day on registration use registration_day / registration_date / "
+            "registered_at, or created_at: \"YYYY-MM-DD\", or $gte/$lt. For one UTC day on last login "
+            "use last_login_day, or last_login_at: \"YYYY-MM-DD\", or $gte/$lt. return_fields: [\"*\"] "
+            "expands to a discovery set including created_at and login telemetry fields."
         )
 
     if output_format == "pipe":

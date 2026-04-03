@@ -14,7 +14,9 @@ Uses database aggregation to group records and calculate totals. It translates n
 
 - `metric` (string, required): Enum [`count`, `distribution`]. Use `distribution` for grouping/ranking (e.g., "most popular", "breakdown"), and `count` for raw totals.
 - `group_by` (string, optional): The exact document field to group by (e.g., `currency`, `type`, `status`).
-- `filters` (object, optional): A dictionary applying pre-aggregation filters. Supports standard MongoDB query operators (`$gte`, `$lte`, `$in`, `$ne`, `$exists`, etc.) to handle complex conditions like dynamic date ranges, exclusions, or thresholds. Map all logical constraints directly to existing document fields (e.g., `created_at`, `updated_at`).
+- `filters` (object, optional): A dictionary applying pre-aggregation filters. Supports standard MongoDB query operators (`$gte`, `$lte`, `$in`, `$ne`, `$exists`, etc.) to handle complex conditions like dynamic date ranges, exclusions, or thresholds. Map all logical constraints directly to existing document fields (e.g., `created_at`, `updated_at`, `last_login_at`, `last_login_ip`).
+- **`last_login_day`** (string, optional, inside `filters`): Calendar day in UTC as `YYYY-MM-DD`. Expands to a `last_login_at` range for that whole day (same semantics as account lookup). Do not pass both `last_login_day` and `last_login_at` in the same `filters` object.
+- **Calendar-day shorthand:** For `last_login_at`, `created_at`, and `updated_at`, a plain string `YYYY-MM-DD` is expanded to a UTC day range automatically (you may still use explicit `$gte` / `$lt` instead).
 - `target_ancestor_id` (string, optional): Restricts aggregation to the entire downline of a specific ID (all descendants). Use this if you know the account's numeric ID.
 - `target_ancestor_username` (string, optional): Restricts aggregation to the entire downline of a specific username (all descendants). The tool resolves the username to an ID internally. Use this when the user refers to an account by name (e.g., "steven_065").
 - `target_parent_id` (string, optional): Restricts aggregation to the DIRECT children of a specific ID. Use this if you know the account's numeric ID.
@@ -27,8 +29,9 @@ Uses database aggregation to group records and calculate totals. It translates n
 - **Example Queries:**
   - "How many users are assigned to agent steven_065?" -> Use `metric: "count"`, `target_parent_username: "steven_065"`, and `filters: {"type": "USER"}`.
   - "Show the currency breakdown for users under agent2." -> Use `metric: "distribution"`, `group_by: "currency"`, `target_ancestor_username: "agent2"`.
-- **Constraint - Schema Strictness:** Strictly map user terminology to the available document schema. Do not hallucinate external tables or metrics (e.g., "transactions", "deposits"). If a user asks about "usage" or "activity", proxy this using available fields like `created_at` or `session_expire`.
-- **Constraint - Temporal & Logical Filtering:** If the user implies a time constraint (e.g., "last month", "this year") or a negative constraint (e.g., "not active"), you MUST construct the corresponding mathematical operator (e.g., `$gte` on `created_at`) inside the `filters` object.
+  - "How many people/users logged in on April 3, 2026?" -> Use `metric: "count"` and `filters: {"type": "USER", "last_login_day": "2026-04-03"}` (or `"last_login_at": "2026-04-03"`). Prefer **`aggregation_reporting`** for this — **do not** use `lookup_account` for whole-platform login-day counts (row limits make it wrong).
+- **Constraint - Schema Strictness:** Strictly map user terminology to the available document schema. Do not hallucinate external tables or metrics (e.g., "transactions", "deposits"). If a user asks about "usage" or "activity", proxy this using available fields like `last_login_at`, `created_at`, or `session_expire`.
+- **Constraint - Temporal & Logical Filtering:** If the user implies a time constraint (e.g., "last month", "this year") or a negative constraint (e.g., "not active"), you MUST construct the corresponding mathematical operator (e.g., `$gte` on `last_login_at` or `created_at`) inside the `filters` object.
 
 ## CRITICAL — Output Format
 
